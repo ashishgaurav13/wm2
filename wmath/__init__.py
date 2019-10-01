@@ -1,1 +1,1 @@
-from .box import Box
+from .twod import Box, Direction2D
