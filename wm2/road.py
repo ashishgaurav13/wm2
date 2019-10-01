@@ -31,6 +31,14 @@ class Intersection(graphics.Group):
         intersection = graphics.Image(road_url, x1, y1, x2-x1, y2-y1)
         super().__init__(items = [intersection])
 
+class StopRegion(graphics.Group):
+
+    def __init__(self, x1, x2, y1, y2):
+        assert(x1 <= x2 and y1 <= y2)
+        region = graphics.Rectangle(x1, x2, y1, y2,
+            color = (0.8, 0.8, 0.8, 1))
+        super().__init__(items = [region])
+
 # Two lane road
 class TwoLaneRoad(graphics.Group):
 
@@ -44,12 +52,12 @@ class TwoLaneRoad(graphics.Group):
                 Lane(x1, x2, y1, y1+self.width),
                 Lane(x1, x2, y1+self.width, y2),
                 graphics.Rectangle(x1, x2, y1+self.width-sep/2, y1+self.width+sep/2,
-                    color = (200, 200, 200, 255)),
+                    color = (1, 1, 1, 1)),
             ])
         else:
             super().__init__(items = [
                 Lane(x1, x1+self.width, y1, y2),
                 Lane(x1+self.width, x2, y1, y2),
                 graphics.Rectangle(x1+self.width-sep/2, x1+self.width+sep/2, y1, y2,
-                    color = (200, 200, 200, 255)),
+                    color = (1, 1, 1, 1)),
             ])
