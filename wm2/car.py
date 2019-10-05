@@ -21,10 +21,12 @@ class Car(graphics.Group):
     THETA_DEVIATION_ALLOWED = np.pi/3
 
     # theta, psi cannot be specified, it is created based on direction
-    def __init__(self, x, y, v, ego = False, 
-        direction = None, canvas = None):
+    def __init__(self, x, y, v, ego = False, direction = None, canvas = None,
+        name = None):
         assert(type(direction) == wmath.Direction2D)
         assert(canvas != None)
+        assert(name != None)
+        self.name = name
         self.x, self.y, self.v = x, y, v
         self.acc, self.psi_dot = 0.0, 0.0
         self.method = 'kinematic_bicycle_RK4'
@@ -39,7 +41,7 @@ class Car(graphics.Group):
         w = self.VEHICLE_X * scale
         h = self.VEHICLE_Y * scale
         vehicle_url = utilities.get_file_from_root('static/vehicle.png')
-        car = graphics.Image(vehicle_url, x, y, w, h, np.rad2deg(self.theta))
+        car = graphics.Image(vehicle_url, x, y, w, h, np.rad2deg(self.theta), anchor_centered=True)
         super().__init__(items = [car])
     
     def which_regions(self):

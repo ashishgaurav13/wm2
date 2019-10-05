@@ -17,13 +17,20 @@ class Canvas(pyglet.window.Window):
         self.ox, self.oy, self.scale = 0, 0, 1.0
         self.allowed_regions = []
         self.agents = []
-        self.static_ids = {'Lane': 0, 'Intersection': 0, 'TwoLaneRoad': 0,
-            'StopRegion': 0}
-    
+        self.static_ids = {'Lane': 0, 'Intersection': 0,
+            'TwoLaneRoad': 0, 'StopRegion': 0}
+        self.agent_ids = {'Car': 0}
+
     def get_static_id_and_increment(self, x):
         assert(x in self.static_ids.keys())
         curr_id = self.static_ids[x]
         self.static_ids[x] += 1
+        return curr_id, "%s%d" % (x, curr_id)
+
+    def get_agent_id_and_increment(self, x):
+        assert(x in self.agent_ids.keys())
+        curr_id = self.agent_ids[x]
+        self.agent_ids[x] += 1
         return curr_id, "%s%d" % (x, curr_id)
 
     def show_allowed_regions(self):
@@ -100,13 +107,13 @@ class Canvas(pyglet.window.Window):
                 assert(not ego_taken)
                 ego_taken = True
                 x, y, v, direction = item[1:]
-                self.agents += [wm2.Car(x, y, v, True, direction, self)]
+                aid, aname = self.get_agent_id_and_increment('Car')
+                self.agents += [wm2.Car(x, y, v, True, direction, self, name = aname)]
 
             elif item[0] == 'Veh':
-                assert(not ego_taken)
-                ego_taken = True
                 x, y, v, direction = item[1:]
-                self.agents += [wm2.Car(x, y, v, False, direction, self)]
+                aid, aname = self.get_agent_id_and_increment('Car')
+                self.agents += [wm2.Car(x, y, v, False, direction, self, name = aname)]
                 self.agents[-1].method = 'point_mass_Euler'
             
             else:
