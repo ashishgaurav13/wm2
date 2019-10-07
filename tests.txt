@@ -1,0 +1,22 @@
+We don't have tests yet, but here is a log of functions we want to have tests for:
+
+graphics.Canvas.get_{static,agent}_id_and_increment
+- Is the number increasing correctly?
+graphics.Canvas.set_lane_width
+- What happens when we set different lane widths? Does it complain? (It should)
+graphics.Canvas.transform_{x,y}{,_inv}
+- need examples
+
+wm2.Car.which_regions
+- should be empty when agent not in allowed_regions
+- different combinations of filter_fn?
+wm2.Car.lane_boundaries
+- need examples with x/y and non x/y Direction2D
+wm2.Car.minimal_stopping_distance{,_from_max_v}
+- need examples
+wm2.Car.closest_{agent,stop_region,intersection}_forward
+- need examples
+wm2.any_agents_in_intersection
+- need examples
+wm2.Car.aggresive_driving (straight for now)
+wm2.Car.step
