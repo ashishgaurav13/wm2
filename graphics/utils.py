@@ -9,17 +9,25 @@ class Canvas(pyglet.window.Window):
     ALLOWED_STATIC_ELEMENTS = ['Grass', 'Lane', 'Intersection', 'TwoLaneRoad']
     ALLOWED_AGENTS = ['Ego', 'Veh']
 
-    def __init__(self, w, h, items = []):
+    def __init__(self, w, h, items = [], ox = 0.0, oy = 0.0, scale = 1.0):
         super().__init__(w, h)
         self.w, self.h = w, h
         self.items = items
         self.on_draw = self.event(self.on_draw)
-        self.ox, self.oy, self.scale = 0, 0, 1.0
+        self.ox, self.oy, self.scale = ox, oy, scale
         self.allowed_regions = []
         self.agents = []
         self.static_ids = {'Lane': 0, 'Intersection': 0,
             'TwoLaneRoad': 0, 'StopRegion': 0}
         self.agent_ids = {'Car': 0}
+        self.lane_width = 0
+        # Only x/y stop regions are supported
+        self.stopx = []
+        self.stopy = []
+        self.intersections = []
+        self.priority_manager = wm2.PriorityManager()
+        self.minx, self.maxx = self.transform_x_inv(0), self.transform_x_inv(w)
+        self.miny, self.maxy = self.transform_y_inv(0), self.transform_y_inv(h)
 
     def get_static_id_and_increment(self, x):
         assert(x in self.static_ids.keys())
@@ -32,6 +40,14 @@ class Canvas(pyglet.window.Window):
         curr_id = self.agent_ids[x]
         self.agent_ids[x] += 1
         return curr_id, "%s%d" % (x, curr_id)
+
+    # Sets canvas lane width
+    # This function enforces a consistent lane width throughout the canvas
+    # If it detects a different lane width, it will throw an error
+    def set_lane_width(self, x1, x2, y1, y2):
+        lane_width = abs(x1-x2) if abs(x1-x2) < abs(y1-y2) else abs(y1-y2)
+        if self.lane_width == 0: self.lane_width = lane_width
+        else: assert(self.lane_width == lane_width)
 
     def show_allowed_regions(self):
         for item in self.allowed_regions:
@@ -48,24 +64,28 @@ class Canvas(pyglet.window.Window):
                 x1, x2, y1, y2 = item[1:]
                 sid, boxname = self.get_static_id_and_increment('Lane')
                 self.allowed_regions += [wmath.Box(x1, x2, y1, y2, boxname)]
-                x1, x2 = self.ox+x1*self.scale, self.ox+x2*self.scale
-                y1, y2 = self.ox+y1*self.scale, self.ox+y2*self.scale
+                self.set_lane_width(x1, x2, y1, y2)
+                x1, x2 = self.transform_x(x1), self.transform_x(x2)
+                y1, y2 = self.transform_y(y1), self.transform_y(y2)
                 self.items += [wm2.Lane(x1, x2, y1, y2)]
 
             elif item[0] == 'Intersection':
                 x1, x2, y1, y2 = item[1:]
                 sid, boxname = self.get_static_id_and_increment('Intersection')
                 self.allowed_regions += [wmath.Box(x1, x2, y1, y2, boxname)]
-                x1, x2 = self.ox+x1*self.scale, self.ox+x2*self.scale
-                y1, y2 = self.ox+y1*self.scale, self.ox+y2*self.scale
+                self.intersections.append(self.allowed_regions[-1])
+                x1, x2 = self.transform_x(x1), self.transform_x(x2)
+                y1, y2 = self.transform_y(y1), self.transform_y(y2)
                 self.items += [wm2.Intersection(x1, x2, y1, y2)]
 
-            elif item[0] == 'StopRegion':
+            elif item[0] == 'StopRegionX' or item[0] == 'StopRegionY':
                 x1, x2, y1, y2 = item[1:]
                 sid, boxname = self.get_static_id_and_increment('StopRegion')
                 self.allowed_regions += [wmath.Box(x1, x2, y1, y2, boxname)]
-                x1, x2 = self.ox+x1*self.scale, self.ox+x2*self.scale
-                y1, y2 = self.ox+y1*self.scale, self.ox+y2*self.scale
+                if 'X' in item[0]: self.stopx.append(self.allowed_regions[-1])
+                if 'Y' in item[0]: self.stopy.append(self.allowed_regions[-1])
+                x1, x2 = self.transform_x(x1), self.transform_x(x2)
+                y1, y2 = self.transform_y(y1), self.transform_y(y2)
                 self.items += [wm2.StopRegion(x1, x2, y1, y2)]
 
             elif item[0] == 'TwoLaneRoad':
@@ -79,6 +99,8 @@ class Canvas(pyglet.window.Window):
                     laneboxname2 = "%s_Lane%d" % (boxname, sid2)
                     self.allowed_regions += [wmath.Box(x1, x1+width, y1, y2, laneboxname1)]
                     self.allowed_regions += [wmath.Box(x1+width, x2, y1, y2, laneboxname2)]
+                    self.set_lane_width(x1, x1+width, y1, y2)
+                    self.set_lane_width(x1+width, x2, y1, y2)
                 else:
                     width = abs(y1-y2) / 2
                     sid1, _ = self.get_static_id_and_increment('Lane')
@@ -87,9 +109,11 @@ class Canvas(pyglet.window.Window):
                     laneboxname2 = "%s_Lane%d" % (boxname, sid2)
                     self.allowed_regions += [wmath.Box(x1, x2, y1, y1+width, laneboxname1)]
                     self.allowed_regions += [wmath.Box(x1, x2, y1+width, y2, laneboxname2)]
+                    self.set_lane_width(x1, x2, y1, y1+width)
+                    self.set_lane_width(x1, x2, y1+width, y2)
                 self.allowed_regions += [wmath.Box(x1, x2, y1, y2, boxname)]
-                x1, x2 = self.ox+x1*self.scale, self.ox+x2*self.scale
-                y1, y2 = self.oy+y1*self.scale, self.oy+y2*self.scale
+                x1, x2 = self.transform_x(x1), self.transform_x(x2)
+                y1, y2 = self.transform_y(y1), self.transform_y(y2)
                 sep = sep*self.scale
                 self.items += [wm2.TwoLaneRoad(x1, x2, y1, y2, sep)]
 
@@ -125,14 +149,25 @@ class Canvas(pyglet.window.Window):
         self.clear()
         for item in self.items:
             item.draw()
+        drew_agents = 0
         for agent in self.agents:
-            agent.draw()
+            if self.minx <= agent.x <= self.maxx and self.miny <= agent.y <= self.maxy:
+                agent.draw()
+                drew_agents += 1
+        return drew_agents
 
     def render(self):
         pyglet.app.run()
+        
+    def transform_x(self, x):
+        return self.ox+x*self.scale
     
-    def set_origin(self, x, y):
-        self.ox, self.oy = x, y
+    def transform_y(self, y):
+        return self.oy+y*self.scale
     
-    def set_scale(self, scale):
-        self.scale = scale
+    def transform_x_inv(self, x):
+        return (x-self.ox) / self.scale
+    
+    def transform_y_inv(self, y):
+        return (y-self.oy) / self.scale
+    
