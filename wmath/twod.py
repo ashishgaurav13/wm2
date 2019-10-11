@@ -63,7 +63,7 @@ class Direction2D:
 
     def angle(self):
         x, y = self.value
-        if x == 1 and y == 0: return 2*np.pi - 0.0
+        if x == 1 and y == 0: return 0.0 # 2*np.pi - 0.0
         elif x == 0 and y == 1: return 2*np.pi - np.pi/2
         elif x == -1 and y == 0: return 2*np.pi - np.pi
         elif x == 0 and y == -1: return 2*np.pi - 3*np.pi/2
