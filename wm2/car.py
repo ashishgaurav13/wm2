@@ -54,6 +54,14 @@ class Car(graphics.Group):
                     in_regions += [region]
         return in_regions
     
+    # return relevant agents (TODO: just cars for now)
+    def get_relevant_agents(self):
+        all_cars = [agent for agent in self.canvas.agents if agent is not self]
+        rx1, rx2, ry1, ry2 = self.lane_boundaries() # cars we really want to consider
+        within_range_cars = [agent for agent in all_cars \
+            if (rx1 <= agent.x <= rx2 and ry1 <= agent.y <= ry2)]
+        return within_range_cars
+
     # Return lane bounds (x1, x2, y1, y2)
     # Either x1/x2 or y1/y2 is supposed to be -np.inf/np.inf
     # Will not work if direction is not exactly vertical or horizontal
@@ -136,6 +144,11 @@ class Car(graphics.Group):
         all_agents = [agent for agent in self.canvas.agents if agent is not self]
         for agent in all_agents:
             if intersection.inside(agent.x, agent.y): return True
+        return False
+
+    def in_any_intersection(self):
+        for intersection in self.canvas.intersections:
+            if intersection.inside(self.x, self.y): return True
         return False
 
     # produces the control input (acc, psi_dot) needed for aggressive driving
