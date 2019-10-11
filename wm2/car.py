@@ -4,7 +4,7 @@ import numpy as np
 
 import graphics
 import utilities
-import wmath
+import wmath, wm2
 
 class Car(graphics.Group):
 
@@ -18,7 +18,8 @@ class Car(graphics.Group):
     DT_over_6 = DT / 6
     VEHICLE_X = 2.5
     VEHICLE_Y = 1.7
-    THETA_DEVIATION_ALLOWED = np.pi/3
+    THETA_DEVIATION_ALLOWED = np.pi/2
+    MAX_STEERING_ANGLE = np.pi/3
     SAFETY_GAP = 6.0
     SPEED_MAX = 11.176 # 11.176 = 40kmph
 
@@ -35,7 +36,7 @@ class Car(graphics.Group):
         self.ego = ego
         self.direction = direction
         self.theta = direction.angle()
-        self.psi = direction.angle()
+        self.psi = 0 # direction.angle()
         self.canvas = canvas
         ox, oy, scale = canvas.ox, canvas.oy, canvas.scale
         x = ox + self.x * scale
@@ -85,7 +86,7 @@ class Car(graphics.Group):
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_agent = agent
-        return min_displacement, ret_agent
+        return {'d': min_displacement, 'o': ret_agent}
     
     # if we do max deceleration, what is the distance needed to stop?
     def minimal_stopping_distance(self):
@@ -117,7 +118,7 @@ class Car(graphics.Group):
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_stopregion = stopregion
-        return min_displacement, ret_stopregion
+        return {'d': min_displacement, 'o': ret_stopregion}
     
     # Return the intersection displacement, Intersection that is closest and in the
     # forward direction as self
@@ -138,7 +139,7 @@ class Car(graphics.Group):
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_intersection = intersection
-        return min_displacement, ret_intersection
+        return {'d': min_displacement, 'o': ret_intersection}
     
     def any_agents_in_intersection(self, intersection):
         all_agents = [agent for agent in self.canvas.agents if agent is not self]
@@ -168,78 +169,123 @@ class Car(graphics.Group):
     # (7) allowed to go towards CSR and should decelerate
     #       => decelerate to stop
     # (8) just drive
-    def aggressive_driving(self):
-        case_num = None
+    def aggressive_driving(self, debug = False):
+
+        if not hasattr(self, 'complexcontroller'):
         K1, K2 = 31.6228, 7.9527
         A1, A2 = 100.0, 10.0 # arbitrary constants
-        all_cars = [agent for agent in self.canvas.agents if agent is not self]
-        rx1, rx2, ry1, ry2 = self.lane_boundaries() # cars we really want to consider
-        within_range_cars = [agent for agent in all_cars \
-            if (rx1 <= agent.x <= rx2 and ry1 <= agent.y <= ry2)]
-        cc_displacement, cc = self.closest_agent_forward(within_range_cars)
-        csr_displacement, csr = self.closest_stop_region_forward()
-        cif_displacement, cif = self.closest_intersection_forward()
-        if cc: cc_after_stop = cc_displacement + cc.minimal_stopping_distance() # how far
-            # would CC be from where ego is currently?
-        ego_after_stop = self.minimal_stopping_distance() # how far will ego be from
-            # where ego is currently?
-        my_direction = self.direction
-        sufficient_distance_from_stop_region = 2*self.minimal_stopping_distance()
-        # multipliers; positive value should allow positive acceleration,
-        # negative value should decelerate
-        if cc: displacement_multiplier = cc_displacement-self.SAFETY_GAP
-        if csr: stop_region_displacement_multiplier = 0-csr_displacement # always used to decelerate
-        if cc: speed_multiplier = cc.v-self.v
-        free_road_speed_multiplier = self.SPEED_MAX-self.v
-        decelerate_speed_multiplier = 0-self.v
-        # booleans
-        if cc: allowed_to_go_towards_cc = cc_displacement-self.SAFETY_GAP > 0
-        if csr: allowed_to_go_towards_stop_region = csr_displacement > sufficient_distance_from_stop_region
-        if csr: should_decelerate_to_stop = (csr_displacement > 0) and \
-            (csr_displacement <= self.minimal_stopping_distance_from_max_v()) and \
-            (csr_displacement <= self.minimal_stopping_distance())
-        no_stop_region_coming_up = csr == None
-        within_stop_region = self.which_regions(filter_fn = lambda x: 'StopRegion' in x.name) != []
-        if cif: intersection_clear = not self.any_agents_in_intersection(cif)
-        if within_stop_region and (cif and intersection_clear): self.canvas.priority_manager.request_priority(self.name)
-        has_priority = self.canvas.priority_manager.has_priority(self.name)
-        if not within_stop_region and has_priority: self.canvas.priority_manager.release_priority(self.name)
-        # (1)
-        if cc and cc.direction.dot(my_direction) <= 0:
-            case_num = 1
-            ret_acc = -self.MAX_ACCELERATION
-        # (2)
-        elif cc and cc_after_stop-ego_after_stop <= self.SAFETY_GAP:
-            case_num = 2
-            ret_acc = -self.MAX_ACCELERATION
-        # (3)
-        elif cc and csr and allowed_to_go_towards_cc and allowed_to_go_towards_stop_region:
-            case_num = 3
-            ret_acc = cc.acc + K1*displacement_multiplier + K2*speed_multiplier
-        # (4)        
-        elif cc and allowed_to_go_towards_cc and no_stop_region_coming_up:
-            case_num = 4
-            ret_acc = cc.acc + K1*displacement_multiplier + K2*speed_multiplier
-        # (5)
-        elif within_stop_region and has_priority and (cif and intersection_clear):
-            case_num = 5
-            ret_acc = A1*free_road_speed_multiplier
-        # (6)
-        elif within_stop_region and (not has_priority or not (cif and intersection_clear)):
-            case_num = 6
-            ret_acc = -self.MAX_ACCELERATION
-        # (7)
-        elif csr and should_decelerate_to_stop:
-            case_num = 7
-            ret_acc = K1*stop_region_displacement_multiplier + K2*decelerate_speed_multiplier
-        # (8)
-        else:
-            case_num = 8
-            ret_acc = A2*free_road_speed_multiplier
+            self.complexcontroller = wm2.ComplexController(
+                predicates = dict(
+                    ego = lambda p: self,
+                    cars = lambda p: self.get_relevant_agents(),
+                    cc = lambda p: p['ego'].closest_agent_forward(p['cars']),
+                    csr = lambda p: p['ego'].closest_stop_region_forward(),
+                    cif = lambda p: p['ego'].closest_intersection_forward(),
+                    cc_after_stop = [
+                        lambda p: p['cc']['o'],
+                        lambda p: p['cc']['d']+p['cc']['o'].minimal_stopping_distance(),
+                    ],
+                    ego_after_stop = lambda p: p['ego'].minimal_stopping_distance(),
+                    sufficiently_away_sr = lambda p: 2 * p['ego'].minimal_stopping_distance(),
+                    allowed_to_go_towards_cc = [
+                        lambda p: p['cc']['o'],
+                        lambda p: p['cc']['d']-p['ego'].SAFETY_GAP > 0,
+                    ],
+                    allowed_to_go_towards_sr = [
+                        lambda p: p['csr']['o'],
+                        lambda p: p['csr']['d'] > p['sufficiently_away_sr'],
+                    ],
+                    should_decelerate_to_stop = [
+                        lambda p: p['csr']['o'],
+                        lambda p: p['csr']['d'] > 0 and \
+                            (p['csr']['d'] <= p['ego'].minimal_stopping_distance_from_max_v()) and \
+                            (p['csr']['d'] <= p['ego'].minimal_stopping_distance())
+                    ],
+                    within_stop_region = lambda p: p['ego'].which_regions(
+                        filter_fn = lambda x: 'StopRegion' in x.name) != [],
+                    intersection_clear = [
+                        lambda p: p['cif']['o'],
+                        lambda p: not p['ego'].any_agents_in_intersection(p['cif']['o']),
+                    ],
+                    in_any_intersection = lambda p: p['ego'].in_any_intersection(),
+                    requested_priority = [
+                        lambda p: p['within_stop_region'] and 'intersection_clear' in p and p['intersection_clear'],
+                        lambda p: p['ego'].canvas.priority_manager.request_priority(p['ego'].name),
+                    ],
+                    has_priority = lambda p: p['ego'].canvas.priority_manager.has_priority(p['ego'].name),
+                    released_priority = [
+                        lambda p: not p['within_stop_region'] and p['has_priority'],
+                        lambda p: p['ego'].canvas.priority_manager.release_priority(p['ego'].name),
+                    ],
+                    # Not used
+                    # init_angle = lambda p: p['ego'].direction.angle(),
+                    # desired_angle = lambda p: (p['init_angle']-np.pi/2) % (2*np.pi),
+                    # curr_angle = lambda p: p['ego'].theta,
+                ),
+                multipliers = dict(
+                    displacement = [
+                        lambda p: p['cc']['o'],
+                        lambda p: p['cc']['d']-p['ego'].SAFETY_GAP,
+                    ],
+                    sr_displacement = [
+                        lambda p: p['csr']['o'],
+                        lambda p: 0-p['csr']['d'],
+                    ],
+                    speed = [
+                        lambda p: p['cc']['o'],
+                        lambda p: p['cc']['o'].v-p['ego'].v,
+                    ],
+                    free_road_speed = lambda p: p['ego'].SPEED_MAX-p['ego'].v,
+                    decelerate_speed = lambda p: 0-p['ego'].v,
+                    # Not used
+                    # theta = lambda p: p['desired_angle']-p['curr_angle'],
+                ),
+                controllers = [
+                    wm2.Controller( # (1)
+                        lambda p: p['cc']['o'] and p['cc']['o'].direction.dot(p['ego'].direction) <= 0,
+                        lambda p, m: (-self.MAX_ACCELERATION, 0),
+                        name = 'EmergencyStop0',
+                    ),
+                    wm2.Controller( # (2)
+                        lambda p: 'cc_after_stop' in p and \
+                            p['cc_after_stop']-p['ego_after_stop'] <= p['ego'].SAFETY_GAP,
+                        lambda p, m: (-self.MAX_ACCELERATION, 0),
+                        name = 'EmergencyStop1',
+                    ),
+                    wm2.Controller( # (7)
+                        lambda p: 'should_decelerate_to_stop' in p and p['should_decelerate_to_stop'],
+                        lambda p, m: (K1*m['sr_displacement']+K2*m['decelerate_speed'], 0),
+                        name = 'Decelerate0',
+                    ),
+                    wm2.Controller( # (5)
+                        lambda p: (p['within_stop_region'] and 'intersection_clear' in p and p['intersection_clear'] and \
+                            p['has_priority']) or p['in_any_intersection'],
+                        lambda p, m: (A1*m['free_road_speed'], 0), # 0.3 * m['theta'] can make it change direction; but 
+                            # it needs to be more general (TODO)
+                        name = 'Enter0'
+                    ),
+                    wm2.Controller( # (6)
+                        lambda p: p['within_stop_region'],
+                        lambda p, m: (-self.MAX_ACCELERATION, 0),
+                        name = 'EmergencyStop2',
+                    ),
+                    wm2.Controller( # (4)
+                        lambda p: not p['within_stop_region'] and \
+                            'allowed_to_go_towards_cc' in p and p['allowed_to_go_towards_cc'],
+                        lambda p, m: (p['cc']['o'].acc + K1*m['displacement'] + K2*m['speed'], 0),
+                        name = 'LQR0',
+                    ),
+                    wm2.DefaultController( # (8)
+                        lambda p, m: (A2*m['free_road_speed'], 0),
+                        name = 'Default0',
+                    )
+                ],
+            )
 
+        ret_acc, ret_psi_dot = self.complexcontroller.control(debug = debug)
         ret_acc = np.clip(ret_acc, -self.MAX_ACCELERATION, self.MAX_ACCELERATION)
-        # print('Case%d: %.2f' % (case_num, ret_acc))
-        return ret_acc, 0
+        ret_psi_dot = np.clip(ret_psi_dot, -self.MAX_STEERING_ANGLE_RATE, self.MAX_STEERING_ANGLE_RATE)
+        return ret_acc, ret_psi_dot
 
     def step(self, u):
         # input clipping.
@@ -254,12 +300,13 @@ class Car(graphics.Group):
         else:
             self.psi_dot = u[1]
 
+        theta = 2*np.pi-self.theta
         if self.method == 'kinematic_bicycle_RK4':
-            K1x = self.v * np.cos(self.theta)
-            K1y = self.v * np.sin(self.theta)
+            K1x = self.v * np.cos(theta)
+            K1y = self.v * np.sin(theta)
             K1th = self.v * np.tan(self.psi) / self.VEHICLE_WHEEL_BASE
 
-            theta_temp = self.theta + DT_over_2 * K1th
+            theta_temp = theta + DT_over_2 * K1th
             v_temp = max([0.0, self.v + DT_over_2 * self.acc])
             psi_temp = np.clip(self.psi + DT_over_2 * self.psi_dot,
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
@@ -268,7 +315,7 @@ class Car(graphics.Group):
             K23y = np.sin(theta_temp)
             K23th = v_temp * np.tan(psi_temp) / self.VEHICLE_WHEEL_BASE
 
-            theta_temp = self.theta + self.DT_over_2 * K23th
+            theta_temp = theta + self.DT_over_2 * K23th
 
             K23x += np.cos(theta_temp)
             K23y += np.sin(theta_temp)
@@ -285,17 +332,19 @@ class Car(graphics.Group):
 
             self.x += self.DT_over_6 * (K1x + K4x) + self.DT_over_3 * K23x
             self.y += self.DT_over_6 * (K1y + K4y) + self.DT_over_3 * K23y
-            self.theta += self.DT_over_6 * (K1th + K4th) + self.DT_2_over_3 * K23th
+            theta += self.DT_over_6 * (K1th + K4th) + self.DT_2_over_3 * K23th
+            self.theta = 2*np.pi-theta
             self.v = v_temp
             self.psi = psi_temp
 
         elif self.method == 'kinematic_bicycle_Euler':
-            self.x += self.DT * self.v * np.cos(self.theta)
-            self.y += self.DT * self.v * np.sin(self.theta)
-            self.theta += self.DT * self.v * np.tan(self.psi) / self.VEHICLE_WHEEL_BASE
+            self.x += self.DT * self.v * np.cos(theta)
+            self.y += self.DT * self.v * np.sin(theta)
+            theta += self.DT * self.v * np.tan(self.psi) / self.VEHICLE_WHEEL_BASE
+            self.theta = 2*np.pi-theta
 
-            self.v = max([0.0, self.v + DT * self.acc])
-            self.psi = np.clip(self.psi + DT * self.psi_dot,
+            self.v = max([0.0, self.v + self.DT * self.acc])
+            self.psi = np.clip(self.psi + self.DT * self.psi_dot,
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
 
         elif self.method == 'point_mass_Euler':
@@ -311,12 +360,13 @@ class Car(graphics.Group):
             raise ValueError
 
         if 'kinematic' in self.method:
-            while abs(self.theta) >= 2 * np.pi:
-                self.theta -= np.sign(self.theta) * 2 * np.pi
-            if self.theta > self.direction.angle()+self.THETA_DEVIATION_ALLOWED:
-                self.theta = self.direction.angle()+self.THETA_DEVIATION_ALLOWED
-            if self.theta < self.direction.angle()-self.THETA_DEVIATION_ALLOWED:
-                self.theta = self.direction.angle()-self.THETA_DEVIATION_ALLOWED
+            theta = 2*np.pi-self.theta
+            orig_theta = 2*np.pi-self.direction.angle()
+            if theta > orig_theta+self.THETA_DEVIATION_ALLOWED:
+                theta = orig_theta+self.THETA_DEVIATION_ALLOWED
+            if theta < orig_theta-self.THETA_DEVIATION_ALLOWED:
+                theta = orig_theta-self.THETA_DEVIATION_ALLOWED
+            self.theta = 2*np.pi-theta
         
         ox, oy, scale = self.canvas.ox, self.canvas.oy, self.canvas.scale
         x = ox + self.x * scale

@@ -31,15 +31,24 @@ canvas.add_agents(
 
 # Get acceleration for aggressive driving
 allowed_agents = list(range(8))
+ii = canvas.intersections[0]
+order = []
 while True:
     canvas.clear()
     canvas.switch_to()
     canvas.dispatch_events()
 
+    intersection_count = 0
     for aid, agent in enumerate(canvas.agents):
+        if ii.x1 <= agent.x <= ii.x2 and ii.y1 <= agent.y <= ii.y2:
+            intersection_count += 1
+            if aid not in order:
+                order += [aid]
+                print(order)
         if aid not in allowed_agents: continue
         control_inputs = agent.aggressive_driving()
         agent.step(control_inputs)
+        # input('?')
 
     drew_agents = canvas.on_draw()
     canvas.flip()
