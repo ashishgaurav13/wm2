@@ -138,7 +138,7 @@ class Canvas(pyglet.window.Window):
                 x, y, v, direction = item[1:]
                 aid, aname = self.get_agent_id_and_increment('Car')
                 self.agents += [wm2.Car(x, y, v, False, direction, self, name = aname)]
-                self.agents[-1].method = 'point_mass_Euler'
+                self.agents[-1].method = 'kinematic_bicycle_Euler' # 'point_mass_Euler'
             
             else:
                 print('Unsupported agent: %s' % item[0])
