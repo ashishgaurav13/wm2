@@ -55,6 +55,9 @@ class Car(graphics.Group):
                     in_regions += [region]
         return in_regions
     
+    def any_regions(self, search_word):
+        return self.which_regions(filter_fn = lambda x: search_word in x.name) != []
+    
     # return relevant agents (TODO: just cars for now)
     def get_relevant_agents(self):
         all_cars = [agent for agent in self.canvas.agents if agent is not self]
@@ -172,8 +175,8 @@ class Car(graphics.Group):
     def aggressive_driving(self, debug = False):
 
         if not hasattr(self, 'complexcontroller'):
-        K1, K2 = 31.6228, 7.9527
-        A1, A2 = 100.0, 10.0 # arbitrary constants
+            K1, K2 = 31.6228, 7.9527
+            A1, A2 = 100.0, 10.0 # arbitrary constants
             self.complexcontroller = wm2.ComplexController(
                 predicates = dict(
                     ego = lambda p: self,
@@ -201,8 +204,7 @@ class Car(graphics.Group):
                             (p['csr']['d'] <= p['ego'].minimal_stopping_distance_from_max_v()) and \
                             (p['csr']['d'] <= p['ego'].minimal_stopping_distance())
                     ],
-                    within_stop_region = lambda p: p['ego'].which_regions(
-                        filter_fn = lambda x: 'StopRegion' in x.name) != [],
+                    within_stop_region = lambda p: p['ego'].any_regions('StopRegion'),
                     intersection_clear = [
                         lambda p: p['cif']['o'],
                         lambda p: not p['ego'].any_agents_in_intersection(p['cif']['o']),
