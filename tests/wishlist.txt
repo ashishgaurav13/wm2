@@ -20,3 +20,6 @@ wm2.any_agents_in_intersection
 - need examples
 wm2.Car.aggresive_driving (straight for now)
 wm2.Car.step
+
+utilities.ltl.Parser
+- other ltl properties: F, G, X, not, (...)
