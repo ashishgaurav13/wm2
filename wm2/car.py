@@ -30,27 +30,29 @@ class Car(graphics.Group):
         assert(canvas != None)
         assert(name != None)
         self.name = name
-        self.x, self.y, self.v = x, y, v
-        self.acc, self.psi_dot = 0.0, 0.0
         self.method = 'kinematic_bicycle_RK4'
         self.ego = ego
         self.direction = direction
-        self.theta = direction.angle()
-        self.psi = 0 # direction.angle()
+        self.features = wm2.Features({
+            'x': x, 'y': y, 'v': v,
+            'acc': 0.0, 'psi_dot': 0.0, 'psi': 0.0,
+            'theta': direction.angle(),
+        })
+        self.f = self.features # shorthand
         self.canvas = canvas
         ox, oy, scale = canvas.ox, canvas.oy, canvas.scale
-        x = ox + self.x * scale
-        y = oy + self.y * scale
+        x = ox + self.f['x'] * scale
+        y = oy + self.f['y'] * scale
         w = self.VEHICLE_X * scale
         h = self.VEHICLE_Y * scale
         vehicle_url = utilities.get_file_from_root('static/vehicle.png')
-        car = graphics.Image(vehicle_url, x, y, w, h, np.rad2deg(self.theta), anchor_centered=True)
+        car = graphics.Image(vehicle_url, x, y, w, h, np.rad2deg(self.f['theta']), anchor_centered=True)
         super().__init__(items = [car])
     
     def which_regions(self, filter_fn = None):
         in_regions = []
         for region in self.canvas.allowed_regions:
-            if type(region) == wmath.Box and region.inside(self.x, self.y):
+            if type(region) == wmath.Box and region.inside(self.f['x'], self.f['y']):
                 if filter_fn and filter_fn(region):
                     in_regions += [region]
         return in_regions
@@ -63,7 +65,7 @@ class Car(graphics.Group):
         all_cars = [agent for agent in self.canvas.agents if agent is not self]
         rx1, rx2, ry1, ry2 = self.lane_boundaries() # cars we really want to consider
         within_range_cars = [agent for agent in all_cars \
-            if (rx1 <= agent.x <= rx2 and ry1 <= agent.y <= ry2)]
+            if (rx1 <= agent.f['x'] <= rx2 and ry1 <= agent.f['y'] <= ry2)]
         return within_range_cars
 
     # Return lane bounds (x1, x2, y1, y2)
@@ -74,9 +76,9 @@ class Car(graphics.Group):
         assert(self.canvas.lane_width > 0)
         half_lane_width = self.canvas.lane_width / 2.0
         if 'x' in self.direction.mode:
-            return -np.inf, np.inf, self.y-half_lane_width, self.y+half_lane_width
+            return -np.inf, np.inf, self.f['y']-half_lane_width, self.f['y']+half_lane_width
         else:
-            return self.x-half_lane_width,self.x+half_lane_width, -np.inf, np.inf
+            return self.f['x']-half_lane_width,self.f['x']+half_lane_width, -np.inf, np.inf
 
     # Return the displacement, agent that is the closest and in the forward direction as self
     def closest_agent_forward(self, list_of_agents):
@@ -84,8 +86,8 @@ class Car(graphics.Group):
         ret_agent = None
         min_displacement = np.inf
         for agent in list_of_agents:
-            displacement_unit_vector = wmath.Direction2D([agent.x-self.x, agent.y-self.y])
-            displacement = np.sqrt((agent.x-self.x)**2+(agent.y-self.y)**2)
+            displacement_unit_vector = wmath.Direction2D([agent.f['x']-self.f['x'], agent.f['y']-self.f['y']])
+            displacement = np.sqrt((agent.f['x']-self.f['x'])**2+(agent.f['y']-self.f['y'])**2)
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_agent = agent
@@ -93,7 +95,7 @@ class Car(graphics.Group):
     
     # if we do max deceleration, what is the distance needed to stop?
     def minimal_stopping_distance(self):
-        curr_v = self.v
+        curr_v = self.f['v']
         return (0.5 * curr_v ** 2) / self.MAX_ACCELERATION
 
     # if we do max deceleration, what is the distance needed to stop?
@@ -116,8 +118,8 @@ class Car(graphics.Group):
             stopregion = stopregion.clip(rx1, rx2, ry1, ry2)
             if stopregion.empty(): continue
             centerx, centery = stopregion.center
-            displacement_unit_vector = wmath.Direction2D([centerx-self.x, centery-self.y])
-            displacement = np.sqrt((centerx-self.x)**2+(centery-self.y)**2)
+            displacement_unit_vector = wmath.Direction2D([centerx-self.f['x'], centery-self.f['y']])
+            displacement = np.sqrt((centerx-self.f['x'])**2+(centery-self.f['y'])**2)
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_stopregion = stopregion
@@ -137,8 +139,8 @@ class Car(graphics.Group):
                 # but return the complete intersection
             if intersection.empty(): continue
             centerx, centery = clipped_intersection.center
-            displacement_unit_vector = wmath.Direction2D([centerx-self.x, centery-self.y])
-            displacement = np.sqrt((centerx-self.x)**2+(centery-self.y)**2)
+            displacement_unit_vector = wmath.Direction2D([centerx-self.f['x'], centery-self.f['y']])
+            displacement = np.sqrt((centerx-self.f['x'])**2+(centery-self.f['y'])**2)
             if displacement < min_displacement and displacement_unit_vector.dot(my_direction) > 0:
                 min_displacement = displacement
                 ret_intersection = intersection
@@ -147,12 +149,12 @@ class Car(graphics.Group):
     def any_agents_in_intersection(self, intersection):
         all_agents = [agent for agent in self.canvas.agents if agent is not self]
         for agent in all_agents:
-            if intersection.inside(agent.x, agent.y): return True
+            if intersection.inside(agent.f['x'], agent.f['y']): return True
         return False
 
     def in_any_intersection(self):
         for intersection in self.canvas.intersections:
-            if intersection.inside(self.x, self.y): return True
+            if intersection.inside(self.f['x'], self.f['y']): return True
         return False
 
     # produces the control input (acc, psi_dot) needed for aggressive driving
@@ -235,10 +237,10 @@ class Car(graphics.Group):
                     ],
                     speed = [
                         lambda p: p['cc']['o'],
-                        lambda p: p['cc']['o'].v-p['ego'].v,
+                        lambda p: p['cc']['o'].f['v']-p['ego'].f['v'],
                     ],
-                    free_road_speed = lambda p: p['ego'].SPEED_MAX-p['ego'].v,
-                    decelerate_speed = lambda p: 0-p['ego'].v,
+                    free_road_speed = lambda p: p['ego'].SPEED_MAX-p['ego'].f['v'],
+                    decelerate_speed = lambda p: 0-p['ego'].f['v'],
                     # Not used
                     # theta = lambda p: p['desired_angle']-p['curr_angle'],
                 ),
@@ -274,7 +276,7 @@ class Car(graphics.Group):
                     wm2.Controller( # (4)
                         lambda p: not p['within_stop_region'] and \
                             'allowed_to_go_towards_cc' in p and p['allowed_to_go_towards_cc'],
-                        lambda p, m: (p['cc']['o'].acc + K1*m['displacement'] + K2*m['speed'], 0),
+                        lambda p, m: (p['cc']['o'].f['acc'] + K1*m['displacement'] + K2*m['speed'], 0),
                         name = 'LQR0',
                     ),
                     wm2.DefaultController( # (8)
@@ -292,25 +294,25 @@ class Car(graphics.Group):
     def step(self, u):
         # input clipping.
         if abs(u[0]) > self.MAX_ACCELERATION:
-            self.acc = np.clip(u[0], -self.MAX_ACCELERATION, self.MAX_ACCELERATION)
+            self.f['acc'] = np.clip(u[0], -self.MAX_ACCELERATION, self.MAX_ACCELERATION)
         else:
-            self.acc = u[0]
+            self.f['acc'] = u[0]
 
         if abs(u[1]) > self.MAX_STEERING_ANGLE_RATE:
-            self.psi_dot = np.clip(u[1], -self.MAX_STEERING_ANGLE_RATE,
+            self.f['psi_dot'] = np.clip(u[1], -self.MAX_STEERING_ANGLE_RATE,
                 self.MAX_STEERING_ANGLE_RATE)
         else:
-            self.psi_dot = u[1]
+            self.f['psi_dot'] = u[1]
 
-        theta = 2*np.pi-self.theta
+        theta = 2*np.pi-self.f['theta']
         if self.method == 'kinematic_bicycle_RK4':
-            K1x = self.v * np.cos(theta)
-            K1y = self.v * np.sin(theta)
-            K1th = self.v * np.tan(self.psi) / self.VEHICLE_WHEEL_BASE
+            K1x = self.f['v'] * np.cos(theta)
+            K1y = self.f['v'] * np.sin(theta)
+            K1th = self.f['v'] * np.tan(self.f['psi']) / self.VEHICLE_WHEEL_BASE
 
             theta_temp = theta + DT_over_2 * K1th
-            v_temp = max([0.0, self.v + DT_over_2 * self.acc])
-            psi_temp = np.clip(self.psi + DT_over_2 * self.psi_dot,
+            v_temp = max([0.0, self.f['v'] + DT_over_2 * self.f['acc']])
+            psi_temp = np.clip(self.f['psi'] + DT_over_2 * self.f['psi_dot'],
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
 
             K23x = np.cos(theta_temp)
@@ -324,53 +326,53 @@ class Car(graphics.Group):
             K23x *= v_temp
             K23y *= v_temp
 
-            v_temp = max([0.0, self.v + self.DT * self.acc])
-            psi_temp = np.clip(self.psi + self.DT * self.psi_dot,
+            v_temp = max([0.0, self.f['v'] + self.DT * self.f['acc']])
+            psi_temp = np.clip(self.f['psi'] + self.DT * self.f['psi_dot'],
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
 
             K4x = v_temp * np.cos(theta_temp)
             K4y = v_temp * np.sin(theta_temp)
             K4th = v_temp * np.tan(psi_temp) / self.VEHICLE_WHEEL_BASE
 
-            self.x += self.DT_over_6 * (K1x + K4x) + self.DT_over_3 * K23x
-            self.y += self.DT_over_6 * (K1y + K4y) + self.DT_over_3 * K23y
+            self.f['x'] += self.DT_over_6 * (K1x + K4x) + self.DT_over_3 * K23x
+            self.f['y'] += self.DT_over_6 * (K1y + K4y) + self.DT_over_3 * K23y
             theta += self.DT_over_6 * (K1th + K4th) + self.DT_2_over_3 * K23th
-            self.theta = 2*np.pi-theta
-            self.v = v_temp
+            self.f['theta'] = 2*np.pi-theta
+            self.f['v'] = v_temp
             self.psi = psi_temp
 
         elif self.method == 'kinematic_bicycle_Euler':
-            self.x += self.DT * self.v * np.cos(theta)
-            self.y += self.DT * self.v * np.sin(theta)
-            theta += self.DT * self.v * np.tan(self.psi) / self.VEHICLE_WHEEL_BASE
-            self.theta = 2*np.pi-theta
+            self.f['x'] += self.DT * self.f['v'] * np.cos(theta)
+            self.f['y'] += self.DT * self.f['v'] * np.sin(theta)
+            theta += self.DT * self.f['v'] * np.tan(self.f['psi']) / self.VEHICLE_WHEEL_BASE
+            self.f['theta'] = 2*np.pi-theta
 
-            self.v = max([0.0, self.v + self.DT * self.acc])
-            self.psi = np.clip(self.psi + self.DT * self.psi_dot,
+            self.f['v'] = max([0.0, self.f['v'] + self.DT * self.f['acc']])
+            self.f['psi'] = np.clip(self.f['psi'] + self.DT * self.f['psi_dot'],
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
 
         elif self.method == 'point_mass_Euler':
-            dv = self.acc * self.DT
-            dx = self.v * self.DT
-            self.v += dv
-            if self.v < 0: self.v = 0
-            self.x += self.direction.value[0] * dx
-            self.y += self.direction.value[1] * dx
+            dv = self.f['acc'] * self.DT
+            dx = self.f['v'] * self.DT
+            self.f['v'] += dv
+            if self.f['v'] < 0: self.f['v'] = 0
+            self.f['x'] += self.direction.value[0] * dx
+            self.f['y'] += self.direction.value[1] * dx
 
         else:
             # point_mass_RK4 method is not implemented yet.
             raise ValueError
 
         if 'kinematic' in self.method:
-            theta = 2*np.pi-self.theta
+            theta = 2*np.pi-self.f['theta']
             orig_theta = 2*np.pi-self.direction.angle()
             if theta > orig_theta+self.THETA_DEVIATION_ALLOWED:
                 theta = orig_theta+self.THETA_DEVIATION_ALLOWED
             if theta < orig_theta-self.THETA_DEVIATION_ALLOWED:
                 theta = orig_theta-self.THETA_DEVIATION_ALLOWED
-            self.theta = 2*np.pi-theta
+            self.f['theta'] = 2*np.pi-theta
         
         ox, oy, scale = self.canvas.ox, self.canvas.oy, self.canvas.scale
-        x = ox + self.x * scale
-        y = oy + self.y * scale
-        self.items[0].items[0].update(x = x, y = y, rotation = np.rad2deg(self.theta))
+        x = ox + self.f['x'] * scale
+        y = oy + self.f['y'] * scale
+        self.items[0].items[0].update(x = x, y = y, rotation = np.rad2deg(self.f['theta']))

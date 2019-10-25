@@ -40,7 +40,7 @@ while True:
 
     intersection_count = 0
     for aid, agent in enumerate(canvas.agents):
-        if ii.x1 <= agent.x <= ii.x2 and ii.y1 <= agent.y <= ii.y2:
+        if ii.x1 <= agent.f['x'] <= ii.x2 and ii.y1 <= agent.f['y'] <= ii.y2:
             intersection_count += 1
             if aid not in order:
                 order += [aid]

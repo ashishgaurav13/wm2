@@ -151,7 +151,7 @@ class Canvas(pyglet.window.Window):
             item.draw()
         drew_agents = 0
         for agent in self.agents:
-            if self.minx <= agent.x <= self.maxx and self.miny <= agent.y <= self.maxy:
+            if self.minx <= agent.f['x'] <= self.maxx and self.miny <= agent.f['y'] <= self.maxy:
                 agent.draw()
                 drew_agents += 1
         return drew_agents
