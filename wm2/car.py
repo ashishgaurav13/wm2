@@ -84,7 +84,7 @@ class Car(graphics.Group):
     
     # Lp norm of displacement from (x, y)
     def Lp(self, x, y, p = 2):
-        return np.linalg.norm([self.f['x']-x, self.f['y']-y], p)
+        return float(np.linalg.norm([self.f['x']-x, self.f['y']-y], p))
 
     # return relevant agents (TODO: just cars for now)
     def get_relevant_agents(self):

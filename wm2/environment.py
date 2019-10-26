@@ -1,5 +1,6 @@
 import graphics
-from utilities.ltl import Bits
+from utilities.ltl import Bits, SeqAP
+from .reward import RewardStructure
 import numpy as np
 import time, datetime
 import gym
@@ -54,6 +55,7 @@ class Environment(gym.Env):
                 self.ego_id = aid
         assert(num_egos <= 1)
         self.num_agents = len(self.agents)
+        self.reward_specified = False
         self.init_time = time.time()
 
         # Which agents to actually draw (or update)
@@ -145,8 +147,30 @@ class Environment(gym.Env):
         self.init_time = time.time()
         for agent in self.agents:
             agent.reset()
+
+        if self.reward_specified:
+            self.reward_structure.reset()
+
         return self.state()
     
+    # properties, rewards, terminations, successes
+    # See craft.IntersectionOnlyEgoEnv for an example
+    # round reward to some decimal places
+    def reward_structure(self, d, p, r, t, s, round_to = 3, clip_to = None):
+        assert(not self.reward_specified)
+        assert(self.ego_id != None)
+        objs = {
+            'ego': self.agents[self.ego_id],
+        }
+        self.reward_structure = RewardStructure(d, p, r, t, s, objs)
+        self.reward_specified = True
+        self.round_to = round_to
+        self.clip_to = [-np.inf, np.inf]
+        if clip_to != None:
+            assert(len(clip_to) == 2)
+            assert(clip_to[0] <= clip_to[1])
+            self.clip_to = clip_to
+
     def step(self, action):
         agents_in_bounds = 0
         reward = 0
@@ -166,6 +190,18 @@ class Environment(gym.Env):
                 control_inputs = self.policies[aid](agent)
                 agent.step(control_inputs)
             agents_in_bounds += self.is_agent_in_bounds(agent)
+
+        # ask the reward structure: what is the reward?
+        if self.reward_specified:
+            reward, info, _ = self.reward_structure.step()
+            reward = np.clip(reward, *self.clip_to)
+            reward = float(reward)
+            reward = round(reward, self.round_to)
+
+        # if terminated or succeeded
+        if info != {}:
+            if info['mode'] == 'success': done = True
+            if info['mode'] == 'termination': done = True
 
         # terminate if nothing is within bounds
         if agents_in_bounds == 0: done = True
