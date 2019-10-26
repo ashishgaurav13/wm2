@@ -1,4 +1,6 @@
 import utilities
+from .predicates import SeqPredicates
+from inspect import isfunction
 
 class Bits:
     """A bit-control class that allows us bit-wise manipulation as shown in the
@@ -58,12 +60,16 @@ class AP:
         self._d = Bits()
         self._p = propositions
         self._n = len(self._p)
+        self._k = list(propositions.keys())
         self.t = 0
         self.update_data() # initial values
 
     def update_data(self):
         for i, func in enumerate(self._p.values()):
-            self._d[i] = func(self.t)
+            if not isfunction(func):
+                self._d[i] = func
+            else:
+                self._d[i] = func(self.t)
 
     def reset(self):
         self.t = 0
@@ -81,13 +87,22 @@ class AP:
     
     def __int__(self):
         return int(self._d)
+    
+    def get_dict(self):
+        ret = {}
+        for i, k in enumerate(self._k):
+            ret[k] = self._d[i]
+        return ret
 
 class SeqAP:
     """Sequential Atomic Propositions. Pass in propositions as
     lambda functions dependent on previous evaluations, timestep t.
     Ensure these lambdas return boolean.
 
-    Additionally, you can also pass extra objects and use them through p.
+    Additionally,
+    
+    (1) you can also pass extra objects in objs and use them through p.
+    (2) you can pass a SeqPredicates object in pre and use it through p.
 
     class Z: pass
     z = Z()
@@ -112,7 +127,7 @@ class SeqAP:
     ...
     """
 
-    def __init__(self, propositions = {}, objs = {}):
+    def __init__(self, propositions = {}, objs = {}, pre = None):
         assert(type(propositions) == dict)
         assert(type(objs) == dict)
         self._d = Bits()
@@ -120,13 +135,21 @@ class SeqAP:
         self._n = len(self._p)
         self._k = list(self._p.keys())
         self.objs = objs
+        if pre != None: assert(type(pre) == SeqPredicates)
+        self.pre = pre
         self.t = 0
         self.update_data() # initial values
 
     def update_data(self):
         evaluated = utilities.combine_dicts({}, self.objs)
+        if self.pre != None:
+            assert(self.pre.t == self.t)
+            evaluated = utilities.combine_dicts(evaluated, self.pre.get_dict())
         for i, func in enumerate(self._p.values()):
-            evaluated[self._k[i]] = func(evaluated, self.t)
+            if not isfunction(func):
+                evaluated[self._k[i]] = func
+            else:   
+                evaluated[self._k[i]] = func(evaluated, self.t)
             self._d[i] = evaluated[self._k[i]]          
 
     def reset(self):
@@ -145,3 +168,9 @@ class SeqAP:
     
     def __int__(self):
         return int(self._d)
+    
+    def get_dict(self):
+        ret = {}
+        for i, k in enumerate(self._k):
+            ret[k] = self._d[i]
+        return ret

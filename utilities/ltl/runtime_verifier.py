@@ -105,6 +105,7 @@ class LTLProperties:
     ...
     """
 
+    # If sequential, then objs can be passed
     def __init__(self, propositions, properties, 
         sequential = False, objs = {}):
 
@@ -125,7 +126,7 @@ class LTLProperties:
                 LTLProperty(property_str, reward, propositions, mode)
             ]
             self.properties[-1].reset()
-    
+
     def check(self):
         total_reward = 0
         violations = []

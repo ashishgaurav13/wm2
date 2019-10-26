@@ -1,7 +1,5 @@
-from utilities.ltl import Bits, AP, SeqAP, LTLProperty, \
-    Parser, Scanner, LTLProperties
-
-# TODO: rename propositions in this file => predicates
+from utilities.ltl import Bits, AP, SeqAP, SeqPredicates, \
+    LTLProperty, Parser, Scanner, LTLProperties
 
 # T1 <= t <= T2
 def construct_trace(propositions, T1, T2):
@@ -145,6 +143,31 @@ def test_seq_ap():
         assert(ap[2] == v[2])
         assert(list(ap) == v)
         ap.step()
+
+def test_seq_predicates():
+    class Z: pass
+    z = Z()
+    z.zz = 20
+    objs = {
+        "z": z,
+    }
+    seq_predicates = {
+        "a": lambda p, t: p['z'].zz + t,
+        "b": lambda p, t: p['a'] * 2,
+        "c": lambda p, t: p['b'] * 2,
+    }
+    p = SeqPredicates(seq_predicates, objs)
+    expected_values = {
+        0: [20, 40, 80],
+        1: [21, 42, 84],
+    }
+    for t, v in expected_values.items():
+        assert(p.t == t)
+        assert(p[0] == v[0])
+        assert(p[1] == v[1])
+        assert(p[2] == v[2])
+        assert(list(p) == v)
+        p.step()
 
 def test_construct_trace():
     propositions = {
