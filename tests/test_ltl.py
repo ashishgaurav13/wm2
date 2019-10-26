@@ -51,14 +51,15 @@ def check_ltl_property(propositions, property_str, maxT,
 
 def check_ltl_properties(propositions, properties_rewards_modes, maxT,
     expected_rewards, expected_num_violations, expected_num_satisfactions,
-    debug = False):
+    debug = False, sequential = False, objs = {}):
 
     if debug:
         for item in properties_rewards_modes:
             p, reward, mode = item
             print("property to check: %s (%s)" % (p, mode))
 
-    ltl = LTLProperties(propositions, properties_rewards_modes)
+    ltl = LTLProperties(propositions, properties_rewards_modes,
+        sequential, objs)
     
     total_reward, info, t = ltl.reset()
 
@@ -279,9 +280,10 @@ def test_ltlp_satisfaction_until():
     check_ltl_property(propositions, property_str, maxT,
         expected_statuses, debug = False, mode = 'satisfaction')
 
-# Property1: a => b
-# Property2: b or c
-# Property3: a U b
+# Property1: a => b, -1 (V)
+# Property2: b or c, -1 (V)
+# Property3: a U b, 1 (S)
+# Property4: d U b, 1 (S)
 # 0 <= t <= 5
 #
 # a: t >= 2, b: t >= 4, c: t == 3
@@ -307,3 +309,38 @@ def test_ltl_simple():
     check_ltl_properties(propositions, properties, maxT,
         expected_rewards, expected_num_violations, expected_num_satisfactions,
         debug = False)
+
+# Property1: a U b, 1 (S)
+# Property2: b => c, -1 (V)
+# 0 <= t <= 5
+#
+# class Z: pass
+# z = Z()
+# z.zz = 3
+# objs = {'z': z}
+# a: t <= p['z'].zz, b: not p['a'], c: t == 5
+# Expected total rewards: [1,]
+def test_ltl_sequential_simple():
+    class Z: pass
+    z = Z()
+    z.zz = 3
+    objs = {
+        'z': z,
+    }
+    properties = [
+        ["a U b", 1, "satisfaction"],
+        ["b => c", -1, "violation"],
+    ]
+    maxT = 5
+    propositions = {
+        "a": lambda p, t: t <= p['z'].zz,
+        "b": lambda p, t: not p['a'],
+        "c": lambda p, t: t == 5,
+    }
+    expected_rewards = [1+0,1+0,1+0,1+0,1-1,1+0]
+    expected_num_violations = [0,0,0,0,1,0]
+    expected_num_satisfactions = [1,1,1,1,1,1]
+
+    check_ltl_properties(propositions, properties, maxT,
+        expected_rewards, expected_num_violations, expected_num_satisfactions,
+        debug = False, sequential = True, objs = objs)

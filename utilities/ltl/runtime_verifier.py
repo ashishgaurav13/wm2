@@ -1,6 +1,6 @@
 from .scanner import Scanner
 from .parser import Parser, Errors
-from .bitwise import AP
+from .bitwise import AP, SeqAP
 
 class LTLProperty(object):
     """
@@ -105,12 +105,18 @@ class LTLProperties:
     ...
     """
 
-    def __init__(self, propositions, properties):
+    def __init__(self, propositions, properties, 
+        sequential = False, objs = {}):
+
         assert(type(propositions) == dict)
         assert(type(properties) == list)
         for p in properties: assert(type(p) == list and len(p) == 3)
+        self.sequential = sequential
         # Create AP
-        self.ap = AP(propositions)
+        if sequential:
+            self.ap = SeqAP(propositions, objs)
+        else:
+            self.ap = AP(propositions)
         # Create properties
         self.properties = []
         for p in properties:
