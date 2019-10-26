@@ -3,8 +3,7 @@ import graphics
 import wm2
 import wmath
 
-canvas = graphics.Canvas(600, 600, ox = 300, oy = 300, scale = 600/100)
-canvas.add_static_elements(
+static_elements = [
     ['Grass'],
     ['TwoLaneRoad', -50, -5, -5, +5, 0.5],
     ['TwoLaneRoad', +5, +50, -5, +5, 0.5],
@@ -15,10 +14,8 @@ canvas.add_static_elements(
     ['StopRegionX', +5, +10, 0, +5],
     ['StopRegionY', -5, 0, +5, +10],
     ['StopRegionY', 0, +5, -10, -5],
-)
-
-# Add agents
-canvas.add_agents(
+]
+agents = [
     ['Veh', -45, -2.5, 0.0, wmath.Direction2D(mode = '+x')],
     ['Veh', -15, -2.5, 0.0, wmath.Direction2D(mode = '+x')],
     ['Veh', +45, +2.5, 0.0, wmath.Direction2D(mode = '-x')],
@@ -27,30 +24,21 @@ canvas.add_agents(
     ['Veh', +2.5, -15, 0.0, wmath.Direction2D(mode = '+y')],
     ['Veh', -2.5, +45, 0.0, wmath.Direction2D(mode = '-y')],
     ['Veh', -2.5, +15, 0.0, wmath.Direction2D(mode = '-y')],
-)
+]
 
-# Get acceleration for aggressive driving
-allowed_agents = list(range(8))
-ii = canvas.intersections[0]
-order = []
-while True:
-    canvas.clear()
-    canvas.switch_to()
-    canvas.dispatch_events()
+canvas = graphics.Canvas(600, 600,
+    static_elements, agents,
+    ox = 300, oy = 300, scale = 600/100)
+default_policy = lambda agent: agent.aggressive_driving()
+env = wm2.Environment(canvas, default_policy)
 
-    intersection_count = 0
-    for aid, agent in enumerate(canvas.agents):
-        if ii.x1 <= agent.f['x'] <= ii.x2 and ii.y1 <= agent.f['y'] <= ii.y2:
-            intersection_count += 1
-            if aid not in order:
-                order += [aid]
-                print(order)
-        if aid not in allowed_agents: continue
-        control_inputs = agent.aggressive_driving()
-        agent.step(control_inputs)
-        # input('?')
+# Debugging properties
+# env.debug['state_inspect'] = True => try out env.state()
+# env.debug['intersection_enter'] = True
 
-    drew_agents = canvas.on_draw()
-    canvas.flip()
+obs = env.reset()
+done = False
 
-    # if drew_agents == 0: break
+while not done:
+    obs, reward, done, info = env.step(None) # no ego
+    env.render()
