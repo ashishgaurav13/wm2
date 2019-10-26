@@ -21,7 +21,7 @@ wm2.any_agents_in_intersection
 wm2.Car.aggresive_driving (straight for now)
 wm2.Car.step
 
-wm2.Environment.{agents_enabled,enable_agent,disable_agent}
+wm2.Environment.{agents_unfrozen,agents_freeze*,agents_unfreeze*}
 wm2.Environment.state
 - check dtype of entire array is correct
 wm2.Enviroment.{step,reset,render}

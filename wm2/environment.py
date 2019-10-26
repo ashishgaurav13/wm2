@@ -13,14 +13,16 @@ class Environment:
     default_policy = lambda c: c.aggressive_driving()
     env = Environment(canvas, default_policy)
 
-    Enable/disable agents which you want to be updated. If
-    disabled, these agents won't move, i.e. their policies
+    Freeze/unfreeze agents which you want to be updated. If
+    frozen, these agents won't move, i.e. their policies
     will not be called. If agent.ego is True, then 
     default_policy doesn't apply to it.
 
-    env.agents_enabled() => all by default
-    env.agent_disable(...)
-    env.agent_enable(...)
+    env.agents_unfrozen() => all by default
+    env.agent_freeze(...)
+    env.agent_unfreeze(...)
+    env.agent_freeze_all()
+    env.agent_unfreeze_all()
 
     Debugging functionalities can be set to True. By default,
     there is no debugging. (TODO: list of debug functionalities)
@@ -76,15 +78,23 @@ class Environment:
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
     
-    def agents_enabled(self):
+    def agents_unfrozen(self):
         return [ai for ai in range(self.num_agents) \
             if self.agents_drawn[ai] == True]
 
-    def agent_enable(self, i):
+    def agent_unfreeze(self, i):
         self.agents_drawn[i] = True
 
-    def agent_disable(self, i):
+    def agent_unfreeze_all(self):
+        for ai in range(self.num_agents):
+            self.agents_drawn[ai] = True
+
+    def agent_freeze(self, i):
         self.agents_drawn[i] = False
+
+    def agent_freeze_all(self):
+        for ai in range(self.num_agents):
+            self.agents_drawn[ai] = False
 
     def state(self):
         assert(hasattr(self, 'f'))
@@ -130,10 +140,10 @@ class Environment:
         
         # update non-egos
         for aid, agent in enumerate(self.agents):
-            if not agent.ego:
+            if not agent.ego and self.agents_drawn[aid]:
                 control_inputs = self.policies[aid](agent)
                 agent.step(control_inputs)
-                agents_in_bounds += self.is_agent_in_bounds(agent)
+            agents_in_bounds += self.is_agent_in_bounds(agent)
 
         # terminate if nothing is within bounds
         if agents_in_bounds == 0: done = True
