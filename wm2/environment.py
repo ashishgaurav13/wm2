@@ -2,9 +2,9 @@ import graphics
 from utilities.ltl import Bits
 import numpy as np
 import time, datetime
+import gym
 
-# TODO: make subclass of gym.Env
-class Environment:
+class Environment(gym.Env):
     """
     Gym based environment that needs a canvas.
     Canvas cannot have more than 32 agents (32-bit int).
@@ -38,9 +38,8 @@ class Environment:
     ...
     env.close()
     """
+    metadata = {'render.modes': ['human']}
 
-    # TODO: observation space
-    # TODO: action space
     def __init__(self, canvas, default_policy = None):
         assert(type(canvas) == graphics.Canvas)
         self.canvas = canvas
@@ -67,7 +66,7 @@ class Environment:
 
         # Policies for non ego
         self.policies = [default_policy for agent in self.agents]
-        if self.ego_id: self.policies[self.ego_id] = None
+        if self.ego_id != None: self.policies[self.ego_id] = None
 
         # Debugging
         self.debug_fns = {
@@ -77,7 +76,26 @@ class Environment:
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
-    
+
+        # Observation space (TODO: can be better defined)
+        s = self.state()
+        self.observation_space = gym.spaces.Box(
+            low = -np.inf,
+            high = np.inf,
+            shape = s.shape,
+        )
+
+        # Action space
+        self.action_space = None
+        if self.ego_id != None:
+            ego = self.agents[self.ego_id]
+            amax = ego.MAX_ACCELERATION
+            psidotmax = ego.MAX_STEERING_ANGLE_RATE
+            self.action_space = gym.spaces.Box(
+                low = np.array([-amax, -psidotmax]),
+                high = np.array([amax, psidotmax]),
+            )
+
     def agents_unfrozen(self):
         return [ai for ai in range(self.num_agents) \
             if self.agents_drawn[ai] == True]
@@ -158,8 +176,7 @@ class Environment:
 
         return self.state(), reward, done, info
         
-
-    def render(self):
+    def render(self, mode = 'human'):
         if not self.rendering:
             self.rendering = True
             self.canvas.set_visible(True)
