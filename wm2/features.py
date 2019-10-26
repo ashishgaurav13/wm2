@@ -1,4 +1,5 @@
 from functools import total_ordering
+import numpy as np
 
 
 @total_ordering
@@ -32,6 +33,9 @@ class Feature:
         else:
             return NotImplementedError()
 
+    def numpy(self, dtype = np.float32):
+        return dtype(self.value)
+
 class Features:
     # holds a bunch of features, almost like utilities.ltl.Bits
     # but the features can be any value
@@ -51,3 +55,9 @@ class Features:
 
     def __repr__(self):
         return ", ".join([str(item) for item in self.o.values()])
+    
+    def keys(self):
+        return self.o.keys()
+    
+    def numpy(self, dtype = np.float32):
+        return np.array([item.numpy(dtype) for item in self.o.values()])
