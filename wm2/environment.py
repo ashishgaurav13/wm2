@@ -1,6 +1,7 @@
 import graphics
 from utilities.ltl import Bits
 import numpy as np
+import time, datetime
 
 # TODO: make subclass of gym.Env
 class Environment:
@@ -52,6 +53,7 @@ class Environment:
                 self.ego_id = aid
         assert(num_egos <= 1)
         self.num_agents = len(self.agents)
+        self.init_time = time.time()
 
         # Which agents to actually draw (or update)
         self.agents_drawn = Bits()
@@ -69,6 +71,7 @@ class Environment:
         self.debug_fns = {
             'intersection_enter': self.debug_intersection_enter,
             'state_inspect': None,
+            'show_elapsed': None,
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
@@ -111,6 +114,7 @@ class Environment:
         return self.canvas.is_agent_in_bounds(agent)
 
     def reset(self):
+        self.init_time = time.time()
         for agent in self.agents:
             agent.reset()
         return self.state()
@@ -130,13 +134,17 @@ class Environment:
                 control_inputs = self.policies[aid](agent)
                 agent.step(control_inputs)
                 agents_in_bounds += self.is_agent_in_bounds(agent)
-        
+
+        # terminate if nothing is within bounds
+        if agents_in_bounds == 0: done = True
+
         # debugging
         if self.debug['intersection_enter']:
             self.debug_fns['intersection_enter']()
-        
-        # terminate if nothing is within bounds
-        if agents_in_bounds == 0: done = True
+        if self.debug['show_elapsed'] and done:
+            assert(self.init_time)
+            diff = int(time.time() - self.init_time)
+            print('Execution: %s' % str(datetime.timedelta(seconds = diff)))
 
         return self.state(), reward, done, info
         

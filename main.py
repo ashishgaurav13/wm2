@@ -35,6 +35,7 @@ env = wm2.Environment(canvas, default_policy)
 # Debugging properties
 # env.debug['state_inspect'] = True => try out env.state()
 # env.debug['intersection_enter'] = True
+# env.debug['show_elapsed'] = True
 
 obs = env.reset()
 done = False
