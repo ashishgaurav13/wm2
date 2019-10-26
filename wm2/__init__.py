@@ -4,3 +4,4 @@ from .priority import PriorityManager
 from .controller import Controller, DefaultController, ComplexController
 from .features import Feature, Features
 from .environment import Environment
+from .reward import RewardChecker, RewardStructure
