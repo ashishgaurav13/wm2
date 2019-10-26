@@ -153,9 +153,13 @@ class Environment(gym.Env):
         done = False
         info = {}
 
-        # ACTION for EGO
-        # CONTROL VARIABLES
-        
+        # update ego
+        if self.ego_id != None:
+            if self.agents_drawn[self.ego_id]:
+                self.agents[self.ego_id].step(action)
+            agents_in_bounds += \
+                self.is_agent_in_bounds(self.agents[self.ego_id])
+
         # update non-egos
         for aid, agent in enumerate(self.agents):
             if not agent.ego and self.agents_drawn[aid]:

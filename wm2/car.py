@@ -313,6 +313,9 @@ class Car(graphics.Group):
         ret_psi_dot = np.clip(ret_psi_dot, -self.MAX_STEERING_ANGLE_RATE, self.MAX_STEERING_ANGLE_RATE)
         return ret_acc, ret_psi_dot
 
+    # u[0] is acceleration (-2, +2)
+    # u[1] is psi_dot (-1, +1)
+    # Note that positive psi_dot will increase counter-clockwise angle
     def step(self, u):
         # input clipping.
         if abs(u[0]) > self.MAX_ACCELERATION:
@@ -332,9 +335,9 @@ class Car(graphics.Group):
             K1y = self.f['v'] * np.sin(theta)
             K1th = self.f['v'] * np.tan(self.f['psi']) / self.VEHICLE_WHEEL_BASE
 
-            theta_temp = theta + DT_over_2 * K1th
-            v_temp = max([0.0, self.f['v'] + DT_over_2 * self.f['acc']])
-            psi_temp = np.clip(self.f['psi'] + DT_over_2 * self.f['psi_dot'],
+            theta_temp = theta + self.DT_over_2 * K1th
+            v_temp = max([0.0, self.f['v'] + self.DT_over_2 * self.f['acc']])
+            psi_temp = np.clip(self.f['psi'] + self.DT_over_2 * self.f['psi_dot'],
                 -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
 
             K23x = np.cos(theta_temp)
