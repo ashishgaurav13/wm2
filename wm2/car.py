@@ -1,6 +1,7 @@
 import pyglet
 from pyglet import gl
 import numpy as np
+from inspect import isfunction
 
 import graphics
 import utilities
@@ -33,10 +34,18 @@ class Car(graphics.Group):
         self.method = 'kinematic_bicycle_RK4'
         self.ego = ego
         self.direction = direction
+        dir_angle = direction.angle()
+        self.original_features = {
+            'x': self.parse_init_function(x),
+            'y': self.parse_init_function(y),
+            'v': self.parse_init_function(v),
+            'theta': self.parse_init_function(dir_angle)
+        }
+        self.of = self.original_features
         self.features = wm2.Features({
-            'x': x, 'y': y, 'v': v,
+            'x': self.of['x'](), 'y': self.of['y'](), 'v': self.of['v'](),
             'acc': 0.0, 'psi_dot': 0.0, 'psi': 0.0,
-            'theta': direction.angle(),
+            'theta': self.of['theta'](),
         })
         self.f = self.features # shorthand
         self.canvas = canvas
@@ -49,6 +58,19 @@ class Car(graphics.Group):
         car = graphics.Image(vehicle_url, x, y, w, h, np.rad2deg(self.f['theta']), anchor_centered=True)
         super().__init__(items = [car])
     
+    # Produces an intialization function; if passed a constant
+    # lambda-wrap it, else return it as is
+    def parse_init_function(self, x):
+        if not isfunction(x):
+            return lambda: x
+        else:
+            return x
+
+    # Reset this agent
+    def reset(self):
+        for attr in ['x', 'y', 'v', 'theta']:
+            self.f[attr] = self.of[attr]()
+
     def which_regions(self, filter_fn = None):
         in_regions = []
         for region in self.canvas.allowed_regions:
