@@ -75,6 +75,7 @@ class Environment(gym.Env):
             'intersection_enter': self.debug_intersection_enter,
             'state_inspect': None,
             'show_elapsed': None,
+            'show_steps': None,
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
@@ -209,6 +210,9 @@ class Environment(gym.Env):
         # debugging
         if self.debug['intersection_enter']:
             self.debug_fns['intersection_enter']()
+        if self.debug['show_steps']:
+            T = self.reward_structure._p.t
+            print(T, reward, info, done)
         if self.debug['show_elapsed'] and done:
             assert(self.init_time)
             diff = int(time.time() - self.init_time)

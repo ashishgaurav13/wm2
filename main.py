@@ -6,6 +6,8 @@ env = craft.IntersectionOnlyEgoEnv()
 # env.debug['state_inspect'] = True => try out env.state()
 # env.debug['intersection_enter'] = True
 env.debug['show_elapsed'] = True
+env.debug['show_steps'] = True
+# env.agent_freeze_all()
 
 obs = env.reset()
 done = False
