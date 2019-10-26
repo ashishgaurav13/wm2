@@ -9,17 +9,17 @@ class Canvas(pyglet.window.Window):
     ALLOWED_STATIC_ELEMENTS = ['Grass', 'Lane', 'Intersection', 'TwoLaneRoad']
     ALLOWED_AGENTS = ['Ego', 'Veh']
 
-    def __init__(self, w, h, items = [], ox = 0.0, oy = 0.0, scale = 1.0):
-        super().__init__(w, h)
+    def __init__(self, w, h, static, agents, ox = 0.0, oy = 0.0, scale = 1.0):
+        super().__init__(w, h, visible = False)
         self.w, self.h = w, h
-        self.items = items
+        self.items = []
         self.on_draw = self.event(self.on_draw)
         self.ox, self.oy, self.scale = ox, oy, scale
         self.allowed_regions = []
         self.agents = []
         self.static_ids = {'Lane': 0, 'Intersection': 0,
             'TwoLaneRoad': 0, 'StopRegion': 0}
-        self.agent_ids = {'Car': 0}
+        self.agent_ids = {'Car': 0, 'Ego': 0}
         self.lane_width = 0
         # Only x/y stop regions are supported
         self.stopx = []
@@ -28,6 +28,8 @@ class Canvas(pyglet.window.Window):
         self.priority_manager = wm2.PriorityManager()
         self.minx, self.maxx = self.transform_x_inv(0), self.transform_x_inv(w)
         self.miny, self.maxy = self.transform_y_inv(0), self.transform_y_inv(h)
+        self._add_static_elements(*static)
+        self._add_agents(*agents)
 
     def get_static_id_and_increment(self, x):
         assert(x in self.static_ids.keys())
@@ -53,7 +55,7 @@ class Canvas(pyglet.window.Window):
         for item in self.allowed_regions:
             print(item)
 
-    def add_static_elements(self, *args):
+    def _add_static_elements(self, *args):
         for item in args:
             assert(type(item) == list)
 
@@ -122,7 +124,7 @@ class Canvas(pyglet.window.Window):
                 print('Allowed static elements: %s' % self.ALLOWED_STATIC_ELEMENTS)
                 exit(0)
 
-    def add_agents(self, *args):
+    def _add_agents(self, *args):
         ego_taken = False
         for item in args:
             assert(type(item) == list)
@@ -131,7 +133,7 @@ class Canvas(pyglet.window.Window):
                 assert(not ego_taken)
                 ego_taken = True
                 x, y, v, direction = item[1:]
-                aid, aname = self.get_agent_id_and_increment('Car')
+                aid, aname = self.get_agent_id_and_increment('Ego')
                 self.agents += [wm2.Car(x, y, v, True, direction, self, name = aname)]
 
             elif item[0] == 'Veh':
@@ -151,10 +153,14 @@ class Canvas(pyglet.window.Window):
             item.draw()
         drew_agents = 0
         for agent in self.agents:
-            if self.minx <= agent.f['x'] <= self.maxx and self.miny <= agent.f['y'] <= self.maxy:
+            if self.is_agent_in_bounds(agent):
                 agent.draw()
                 drew_agents += 1
         return drew_agents
+
+    def is_agent_in_bounds(self, agent):
+        return self.minx <= agent.f['x'] <= self.maxx and \
+            self.miny <= agent.f['y'] <= self.maxy
 
     def render(self):
         pyglet.app.run()
