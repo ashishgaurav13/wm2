@@ -79,9 +79,13 @@ class Car(graphics.Group):
                     in_regions += [region]
         return in_regions
     
-    def any_regions(self, search_word):
+    def any_regions(self, search_word = ''):
         return self.which_regions(filter_fn = lambda x: search_word in x.name) != []
     
+    # Lp norm of displacement from (x, y)
+    def Lp(self, x, y, p = 2):
+        return np.linalg.norm([self.f['x']-x, self.f['y']-y], p)
+
     # return relevant agents (TODO: just cars for now)
     def get_relevant_agents(self):
         all_cars = [agent for agent in self.canvas.agents if agent is not self]
