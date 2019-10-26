@@ -1,3 +1,4 @@
+import utilities
 
 class Bits:
     """A bit-control class that allows us bit-wise manipulation as shown in the
@@ -63,6 +64,70 @@ class AP:
     def update_data(self):
         for i, func in enumerate(self._p.values()):
             self._d[i] = func(self.t)
+
+    def reset(self):
+        self.t = 0
+
+    def step(self):
+        self.t += 1
+        self.update_data() # initial values
+    
+    def __getitem__(self, index):
+        return self._d[index]
+    
+    def __iter__(self):
+        for i in range(self._n):
+            yield self._d[i]
+    
+    def __int__(self):
+        return int(self._d)
+
+class SeqAP:
+    """Sequential Atomic Propositions. Pass in propositions as
+    lambda functions dependent on previous evaluations, timestep t.
+    Ensure these lambdas return boolean.
+
+    Additionally, you can also pass extra objects and use them through p.
+
+    class Z: pass
+    z = Z()
+    z.zz = 20
+    objs = {
+        "z": z,
+    }
+    seq_propositions = {
+        "A": lambda p, t: t % 2 == 0,
+        "B": lambda p, t: not p['A'],
+        "C": lambda p, t: p['z'].zz == 20
+    }
+    ap = SeqAP(seq_propositions, objs)
+    ap.t => 0
+    ap[0,1,2] => True, False, True
+    ap.step()
+    ap.t => 1
+    ap[0,1,2] => False, True, True
+    ap.step()
+    ap.t => 2
+    ap[0,1,2] => True, False, True
+    ...
+    """
+
+    def __init__(self, propositions = {}, objs = {}):
+        assert(type(propositions) == dict)
+        assert(type(objs) == dict)
+        self._d = Bits()
+        self._p = propositions
+        self._n = len(self._p)
+        self._k = list(self._p.keys())
+        self.objs = objs
+        self.t = 0
+        self.update_data() # initial values
+
+    def update_data(self):
+        evaluated = utilities.combine_dicts({}, self.objs)
+        for i, func in enumerate(self._p.values()):
+            evaluated[self._k[i]] = func(evaluated, self.t)
+            self._d[i] = evaluated[self._k[i]]          
 
     def reset(self):
         self.t = 0
