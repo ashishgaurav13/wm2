@@ -1,9 +1,14 @@
 import os, sys
 
 def get_root_dir():
+    FILENAME = 'requirements.txt'
+    # Maybe its already in the path
+    for p in sys.path:
+        if p.endswith("wm2") or p.endswith("wm2/"):
+            if os.path.isfile(os.path.join(p, FILENAME)):
+                return p
     # Keep going up until we find a requirements.txt
     ret = os.path.dirname(os.path.realpath(sys.modules['__main__'].__file__))
-    FILENAME = 'requirements.txt'
     get_files = lambda x: [f for f in os.listdir(x) if os.path.isfile(os.path.join(x, f))]
     tries, total_tries = 0, 3
     # Not more than 3 levels deep
