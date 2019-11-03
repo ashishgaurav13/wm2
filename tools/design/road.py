@@ -2,8 +2,8 @@ import pyglet
 from pyglet import gl
 from numpy import rad2deg
 
-import graphics
-import utilities
+import tools.pyglet as graphics
+import tools.misc as utilities
 
 class Grass(graphics.Group):
 
