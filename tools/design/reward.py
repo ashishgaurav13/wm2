@@ -80,11 +80,11 @@ class RewardStructure:
     # Combine r, t, s values into a single thing
     def combine_rts(self, r, t, s):
         # check success
-        if len(s[1]) > 0:
+        if len(s[1]) != 0:
             s[1]['mode'] = 'success'
             return s
         # check failure
-        if len(t[1]) > 0:
+        if len(t[1]) != 0:
             t[1]['mode'] = 'termination'
             return t
         # normal reward

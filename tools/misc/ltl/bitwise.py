@@ -18,6 +18,7 @@ class Bits:
         return (self._d >> index) & 1
 
     def __setitem__(self, index, value):
+        value = bool(value) # ADDED
         value = (value & 1) << index
         mask = 1 << index
         self._d = (self._d & ~mask) | value
