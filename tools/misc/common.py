@@ -1,3 +1,5 @@
+import numpy as np
+
 def combine_dicts(*args):
     ret = {}
     for d in args:
@@ -15,3 +17,7 @@ def combine_infos(*args):
             else:
                 ret[key] += value
     return ret
+
+def dict_to_numpy(x):
+    if type(x) != dict: return x
+    return np.array([dict_to_numpy(val) for val in x.values()]).flatten()

@@ -61,3 +61,6 @@ class Features:
     
     def numpy(self, dtype = np.float32):
         return np.array([item.numpy(dtype) for item in self.o.values()])
+    
+    def get_dict(self):
+        return {key: self.o[key].value for key in self.o.keys()}
