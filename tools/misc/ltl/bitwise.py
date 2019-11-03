@@ -170,8 +170,11 @@ class SeqAP:
     def __int__(self):
         return int(self._d)
     
-    def get_dict(self):
+    def get_dict(self, keys = None):
         ret = {}
         for i, k in enumerate(self._k):
-            ret[k] = self._d[i]
+            if keys != None and k in keys:
+                ret[k] = self._d[i]
+            elif keys == None:
+                ret[k] = self._d[i]
         return ret

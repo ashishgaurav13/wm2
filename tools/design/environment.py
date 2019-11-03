@@ -91,7 +91,6 @@ class Environment(gym.Env):
 
     # Create obs space and action space after everything is set
     def make_ready(self):
-        assert(not self.ready)
         self.ready = True
 
         # Observation space (TODO: can be better defined)
