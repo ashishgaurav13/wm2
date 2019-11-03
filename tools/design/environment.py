@@ -81,6 +81,7 @@ class Environment(gym.Env):
             'kill_after_state_inspect': None,
             'show_elapsed': None,
             'show_steps': None,
+            'record_reward_trajectory': None
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
@@ -149,7 +150,7 @@ class Environment(gym.Env):
                     ret[aid] = self.ego_fn(agent, self.reward_structure)
                 else:
                     ret[aid] = self.other_fn(agent, self.reward_structure)
-        if self.debug['state_inspect']:
+            if self.debug['state_inspect']: 
                 print('Dict:')
                 print(json.dumps(ret, indent = 2))
                 print('Flattened Numpy:')
@@ -191,6 +192,9 @@ class Environment(gym.Env):
         if self.reward_specified:
             self.total_reward = 0.0
             self.reward_structure.reset()
+
+        if self.debug['record_reward_trajectory']:
+            self.trajectory = []
 
         return self.state()
     
@@ -236,9 +240,19 @@ class Environment(gym.Env):
         # ask the reward structure: what is the reward?
         if self.reward_specified:
             reward, info, _ = self.reward_structure.step()
-            reward = np.clip(reward, *self.clip_to)
+            if self.total_reward + reward > self.clip_to[1]:
+                if self.clip_to[1] != np.inf:
+                    reward = self.clip_to[1]-self.total_reward
+                else:
+                    reward = 0
+            if self.total_reward + reward < self.clip_to[0]:
+                if self.clip_to[0] != -np.inf:
+                    reward = self.clip_to[0]-self.total_reward
+                else:
+                    reward = 0
             reward = float(reward)
             reward = round(reward, self.round_to)
+            self.total_reward += reward
 
         # if terminated or succeeded
         if info != {}:
@@ -258,6 +272,9 @@ class Environment(gym.Env):
             assert(self.init_time)
             diff = int(time.time() - self.init_time)
             print('Execution: %s' % str(datetime.timedelta(seconds = diff)))
+        if self.debug['record_reward_trajectory']:
+            self.trajectory += [reward]
+            if done: info['traj'] = self.trajectory[:]
 
         return self.state(), reward, done, info
         
