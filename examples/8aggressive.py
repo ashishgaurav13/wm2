@@ -2,9 +2,9 @@ import os, sys
 sys.path.append(os.getcwd())
 
 import pyglet
-import graphics
-import wm2
-import wmath
+import tools.pyglet as graphics
+import tools.design as design
+import tools.math as wmath
 
 static_elements = [
     ['Grass'],
@@ -33,7 +33,7 @@ canvas = graphics.Canvas(600, 600,
     static_elements, agents,
     ox = 300, oy = 300, scale = 600/100)
 default_policy = lambda agent: agent.aggressive_driving()
-env = wm2.Environment(canvas, default_policy)
+env = design.Environment(canvas, default_policy)
 
 obs = env.reset()
 done = False

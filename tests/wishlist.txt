@@ -1,31 +1,31 @@
 We don't have tests yet, but here is a log of functions we want to have tests for:
 
-graphics.Canvas.get_{static,agent}_id_and_increment
+tools.pyglet.Canvas.get_{static,agent}_id_and_increment
 - Is the number increasing correctly?
-graphics.Canvas.set_lane_width
+tools.pyglet.Canvas.set_lane_width
 - What happens when we set different lane widths? Does it complain? (It should)
-graphics.Canvas.transform_{x,y}{,_inv}
+tools.pyglet.Canvas.transform_{x,y}{,_inv}
 - need examples
 
-wm2.Car.which_regions
+tools.design.Car.which_regions
 - should be empty when agent not in allowed_regions
 - different combinations of filter_fn?
-wm2.Car.lane_boundaries
+tools.design.Car.lane_boundaries
 - need examples with x/y and non x/y Direction2D
-wm2.Car.minimal_stopping_distance{,_from_max_v}
+tools.design.Car.minimal_stopping_distance{,_from_max_v}
 - need examples
-wm2.Car.closest_{agent,stop_region,intersection}_forward
+tools.design.Car.closest_{agent,stop_region,intersection}_forward
 - need examples
-wm2.any_agents_in_intersection
+tools.design.any_agents_in_intersection
 - need examples
-wm2.Car.aggresive_driving (straight for now)
-wm2.Car.step
+tools.design.Car.aggresive_driving (straight for now)
+tools.design.Car.step
 
-wm2.Environment.{agents_unfrozen,agents_freeze*,agents_unfreeze*}
-wm2.Environment.state
+tools.design.Environment.{agents_unfrozen,agents_freeze*,agents_unfreeze*}
+tools.design.Environment.state
 - check dtype of entire array is correct
-wm2.Enviroment.{step,reset,render}
+tools.design.Enviroment.{step,reset,render}
 - unknown how?
 
-utilities.ltl.Parser
+tools.misc.ltl.Parser
 - other ltl properties: F, G, X, not, (...)

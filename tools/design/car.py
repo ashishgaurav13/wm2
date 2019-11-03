@@ -3,9 +3,10 @@ from pyglet import gl
 import numpy as np
 from inspect import isfunction
 
-import graphics
-import utilities
-import wmath, wm2
+import tools.pyglet as graphics
+import tools.misc as utilities
+import tools.math as wmath
+import tools.design as design
 
 class Car(graphics.Group):
 
@@ -42,7 +43,7 @@ class Car(graphics.Group):
             'theta': self.parse_init_function(dir_angle)
         }
         self.of = self.original_features
-        self.features = wm2.Features({
+        self.features = design.Features({
             'x': self.of['x'](), 'y': self.of['y'](), 'v': self.of['v'](),
             'acc': 0.0, 'psi_dot': 0.0, 'psi': 0.0,
             'theta': self.of['theta'](),
@@ -205,7 +206,7 @@ class Car(graphics.Group):
         if not hasattr(self, 'complexcontroller'):
             K1, K2 = 31.6228, 7.9527
             A1, A2 = 100.0, 10.0 # arbitrary constants
-            self.complexcontroller = wm2.ComplexController(
+            self.complexcontroller = design.ComplexController(
                 predicates = dict(
                     ego = lambda p: self,
                     cars = lambda p: self.get_relevant_agents(),
@@ -271,41 +272,41 @@ class Car(graphics.Group):
                     # theta = lambda p: p['desired_angle']-p['curr_angle'],
                 ),
                 controllers = [
-                    wm2.Controller( # (1)
+                    design.Controller( # (1)
                         lambda p: p['cc']['o'] and p['cc']['o'].direction.dot(p['ego'].direction) <= 0,
                         lambda p, m: (-self.MAX_ACCELERATION, 0),
                         name = 'EmergencyStop0',
                     ),
-                    wm2.Controller( # (2)
+                    design.Controller( # (2)
                         lambda p: 'cc_after_stop' in p and \
                             p['cc_after_stop']-p['ego_after_stop'] <= p['ego'].SAFETY_GAP,
                         lambda p, m: (-self.MAX_ACCELERATION, 0),
                         name = 'EmergencyStop1',
                     ),
-                    wm2.Controller( # (7)
+                    design.Controller( # (7)
                         lambda p: 'should_decelerate_to_stop' in p and p['should_decelerate_to_stop'],
                         lambda p, m: (K1*m['sr_displacement']+K2*m['decelerate_speed'], 0),
                         name = 'Decelerate0',
                     ),
-                    wm2.Controller( # (5)
+                    design.Controller( # (5)
                         lambda p: (p['within_stop_region'] and 'intersection_clear' in p and p['intersection_clear'] and \
                             p['has_priority']) or p['in_any_intersection'],
                         lambda p, m: (A1*m['free_road_speed'], 0), # 0.3 * m['theta'] can make it change direction; but 
                             # it needs to be more general (TODO)
                         name = 'Enter0'
                     ),
-                    wm2.Controller( # (6)
+                    design.Controller( # (6)
                         lambda p: p['within_stop_region'],
                         lambda p, m: (-self.MAX_ACCELERATION, 0),
                         name = 'EmergencyStop2',
                     ),
-                    wm2.Controller( # (4)
+                    design.Controller( # (4)
                         lambda p: not p['within_stop_region'] and \
                             'allowed_to_go_towards_cc' in p and p['allowed_to_go_towards_cc'],
                         lambda p, m: (p['cc']['o'].f['acc'] + K1*m['displacement'] + K2*m['speed'], 0),
                         name = 'LQR0',
                     ),
-                    wm2.DefaultController( # (8)
+                    design.DefaultController( # (8)
                         lambda p, m: (A2*m['free_road_speed'], 0),
                         name = 'Default0',
                     )

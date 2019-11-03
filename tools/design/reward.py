@@ -1,5 +1,5 @@
-from utilities.ltl import SeqAP, SeqPredicates, LTLProperty, LTLProperties
-from utilities import combine_dicts, combine_infos
+from tools.misc.ltl import SeqAP, SeqPredicates, LTLProperty, LTLProperties
+from tools.misc import combine_dicts, combine_infos
 from inspect import isfunction
 
 class RewardChecker(LTLProperties):

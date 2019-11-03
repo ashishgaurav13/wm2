@@ -1,5 +1,5 @@
-from wm2 import RewardChecker, RewardStructure
-from utilities.ltl import SeqAP, SeqPredicates
+from tools.design import RewardChecker, RewardStructure
+from tools.misc.ltl import SeqAP, SeqPredicates
 
 def test_definitions_propositions_together():
     class Z: pass

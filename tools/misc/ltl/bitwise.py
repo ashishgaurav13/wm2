@@ -1,4 +1,4 @@
-import utilities
+import tools.misc as utilities
 from .predicates import SeqPredicates
 from inspect import isfunction
 

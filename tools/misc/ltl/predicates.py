@@ -1,4 +1,4 @@
-import utilities
+import tools.misc as utilities
 from inspect import isfunction
 
 class SeqPredicates:

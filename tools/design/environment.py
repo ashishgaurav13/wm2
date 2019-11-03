@@ -1,5 +1,5 @@
-import graphics
-from utilities.ltl import Bits, SeqAP
+import tools.pyglet as graphics
+from tools.misc.ltl import Bits, SeqAP
 from .reward import RewardStructure
 import numpy as np
 import time, datetime

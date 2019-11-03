@@ -1,4 +1,4 @@
-from utilities.ltl import Bits, AP, SeqAP, SeqPredicates, \
+from tools.misc.ltl import Bits, AP, SeqAP, SeqPredicates, \
     LTLProperty, Parser, Scanner, LTLProperties
 
 # T1 <= t <= T2

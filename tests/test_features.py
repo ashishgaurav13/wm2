@@ -1,4 +1,4 @@
-from wm2 import Feature, Features
+from tools.design import Feature, Features
 
 def test_feature_simple():
     f = Feature('x', 1.20)

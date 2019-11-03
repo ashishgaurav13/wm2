@@ -1,4 +1,4 @@
-import utilities
+import tools.misc as utilities
 
 # Every controller has a precondition_fn and a rule_fn to produce control inputs
 class Controller:

@@ -1,8 +1,9 @@
 import pyglet
 from pyglet import gl
 
-import graphics
-import wm2, wmath
+import tools.pyglet as graphics
+import tools.design as design
+import tools.math as wmath
 
 class Canvas(pyglet.window.Window):
 
@@ -25,7 +26,7 @@ class Canvas(pyglet.window.Window):
         self.stopx = []
         self.stopy = []
         self.intersections = []
-        self.priority_manager = wm2.PriorityManager()
+        self.priority_manager = design.PriorityManager()
         self.minx, self.maxx = self.transform_x_inv(0), self.transform_x_inv(w)
         self.miny, self.maxy = self.transform_y_inv(0), self.transform_y_inv(h)
         self._add_static_elements(*static)
@@ -60,7 +61,7 @@ class Canvas(pyglet.window.Window):
             assert(type(item) == list)
 
             if item[0] == 'Grass':
-                self.items += [wm2.Grass(self)]
+                self.items += [design.Grass(self)]
 
             elif item[0] == 'Lane':
                 x1, x2, y1, y2 = item[1:]
@@ -69,7 +70,7 @@ class Canvas(pyglet.window.Window):
                 self.set_lane_width(x1, x2, y1, y2)
                 x1, x2 = self.transform_x(x1), self.transform_x(x2)
                 y1, y2 = self.transform_y(y1), self.transform_y(y2)
-                self.items += [wm2.Lane(x1, x2, y1, y2)]
+                self.items += [design.Lane(x1, x2, y1, y2)]
 
             elif item[0] == 'Intersection':
                 x1, x2, y1, y2 = item[1:]
@@ -78,7 +79,7 @@ class Canvas(pyglet.window.Window):
                 self.intersections.append(self.allowed_regions[-1])
                 x1, x2 = self.transform_x(x1), self.transform_x(x2)
                 y1, y2 = self.transform_y(y1), self.transform_y(y2)
-                self.items += [wm2.Intersection(x1, x2, y1, y2)]
+                self.items += [design.Intersection(x1, x2, y1, y2)]
 
             elif item[0] == 'StopRegionX' or item[0] == 'StopRegionY':
                 x1, x2, y1, y2 = item[1:]
@@ -88,7 +89,7 @@ class Canvas(pyglet.window.Window):
                 if 'Y' in item[0]: self.stopy.append(self.allowed_regions[-1])
                 x1, x2 = self.transform_x(x1), self.transform_x(x2)
                 y1, y2 = self.transform_y(y1), self.transform_y(y2)
-                self.items += [wm2.StopRegion(x1, x2, y1, y2)]
+                self.items += [design.StopRegion(x1, x2, y1, y2)]
 
             elif item[0] == 'TwoLaneRoad':
                 x1, x2, y1, y2, sep = item[1:]
@@ -117,7 +118,7 @@ class Canvas(pyglet.window.Window):
                 x1, x2 = self.transform_x(x1), self.transform_x(x2)
                 y1, y2 = self.transform_y(y1), self.transform_y(y2)
                 sep = sep*self.scale
-                self.items += [wm2.TwoLaneRoad(x1, x2, y1, y2, sep)]
+                self.items += [design.TwoLaneRoad(x1, x2, y1, y2, sep)]
 
             else:
                 print('Unsupported static element: %s' % item[0])
@@ -134,12 +135,12 @@ class Canvas(pyglet.window.Window):
                 ego_taken = True
                 x, y, v, direction = item[1:]
                 aid, aname = self.get_agent_id_and_increment('Ego')
-                self.agents += [wm2.Car(x, y, v, True, direction, self, name = aname)]
+                self.agents += [design.Car(x, y, v, True, direction, self, name = aname)]
 
             elif item[0] == 'Veh':
                 x, y, v, direction = item[1:]
                 aid, aname = self.get_agent_id_and_increment('Car')
-                self.agents += [wm2.Car(x, y, v, False, direction, self, name = aname)]
+                self.agents += [design.Car(x, y, v, False, direction, self, name = aname)]
                 self.agents[-1].method = 'kinematic_bicycle_Euler' # 'point_mass_Euler'
             
             else:

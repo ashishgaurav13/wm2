@@ -1,10 +1,10 @@
 import pyglet
-import graphics
-import wm2
-import wmath
+import tools.pyglet as graphics
+import tools.design as design
+import tools.math as wmath
 import numpy as np
 
-class IntersectionOnlyEgoEnv(wm2.Environment):
+class IntersectionOnlyEgoEnv(design.Environment):
     """
     Intersection environment with just one vehicle, that is,
     the ego. Ego is placed at the leftmost end and has to
