@@ -17,17 +17,17 @@ class IntersectionOnlyEgoEnv(design.Environment):
         moving_horizontally: lambda p, t: -5 <= p['ego'].f['y'] <= 5
 
     Propositions:
-        stopped: p['ego'].f['v'] == 0,
+        stopped: t > 0 and p['ego'].f['v'] == 0,
         out_of_bounds: (not p['ego'].any_regions()) or (not p['moving_horizontally']),
         near_goal: p['ego'].Lp(+45, -2.5) <= 2.5,
 
     Reward:
         true, -p['deviation_mid_lane']/5 (S)
-        stopped, -1 (S)
 
     Termination:
         out_of_bounds, -100 (S)
-    
+        stopped, -100 (S)
+
     Success:
         near_goal, 100 (S)
     """
@@ -48,7 +48,7 @@ class IntersectionOnlyEgoEnv(design.Environment):
             ['StopRegionY', 0, +5, -10, -5],
         ]
         agents = [
-            ['Ego', -45, -2.5, 0.0, wmath.Direction2D(mode = '+x')],
+            ['Ego', lambda: -45 + np.random.rand() * 10 , -2.5, 0.0, wmath.Direction2D(mode = '+x')],
         ]
         canvas = graphics.Canvas(600, 600,
             static_elements, agents,
@@ -62,18 +62,16 @@ class IntersectionOnlyEgoEnv(design.Environment):
             "moving_horizontally": lambda p, t: -5 <= p['ego'].f['y'] <= 5
         }
         p = {
-            "stopped": lambda p, t: p['ego'].f['v'] == 0,
+            "stopped": lambda p, t: t > 0 and p['ego'].f['v'] == 0,
             "out_of_bounds": lambda p, t: (not p['ego'].any_regions()) or (not p['moving_horizontally']),
             "near_goal": lambda p, t: p['ego'].Lp(45, -2.5) <= 2.5,
         }
-        # 0 <= d <= 2.5
-        # 0 <= ed-1 <= 11
         r = [
             ["true", lambda p, t: -p['deviation_mid_lane']/5, 'satisfaction'],
-            ["stopped", -1, 'satisfaction'],
         ]
         t = [
             ['out_of_bounds', -100, 'satisfaction'],
+            ["stopped", -100, 'satisfaction'],
         ]
         s = [
             ['near_goal', 100, 'satisfaction'],
