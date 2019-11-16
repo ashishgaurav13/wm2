@@ -10,7 +10,9 @@ class Canvas(pyglet.window.Window):
     ALLOWED_STATIC_ELEMENTS = ['Grass', 'Lane', 'Intersection', 'TwoLaneRoad']
     ALLOWED_AGENTS = ['Ego', 'Veh']
 
-    def __init__(self, w, h, static, agents, ox = 0.0, oy = 0.0, scale = 1.0):
+    def __init__(self, w, h, static, agents, ox = 0.0, oy = 0.0, scale = 1.0,
+        ordered = False, order = None):
+
         super().__init__(w, h, visible = False)
         self.w, self.h = w, h
         self.items = []
@@ -26,7 +28,7 @@ class Canvas(pyglet.window.Window):
         self.stopx = []
         self.stopy = []
         self.intersections = []
-        self.priority_manager = design.PriorityManager()
+        self.priority_manager = design.PriorityManager(ordered = ordered, order = order)
         self.minx, self.maxx = self.transform_x_inv(0), self.transform_x_inv(w)
         self.miny, self.maxy = self.transform_y_inv(0), self.transform_y_inv(h)
         self._add_static_elements(*static)

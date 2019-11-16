@@ -87,6 +87,15 @@ class Car(graphics.Group):
     def Lp(self, x, y, p = 2):
         return float(np.linalg.norm([self.f['x']-x, self.f['y']-y], p))
 
+    # return the index in agents
+    def index_in_agents(self):
+        for aid, agent in enumerate(self.canvas.agents):
+            if self is agent:
+                return aid
+        # Cant reach here
+        print('Error: reached unreachable code')
+        exit(0)
+
     # return relevant agents (TODO: just cars for now)
     def get_relevant_agents(self):
         all_cars = [agent for agent in self.canvas.agents if agent is not self]
@@ -210,6 +219,7 @@ class Car(graphics.Group):
                 predicates = dict(
                     ego = lambda p: self,
                     cars = lambda p: self.get_relevant_agents(),
+                    ego_index = lambda p: self.index_in_agents(),
                     cc = lambda p: p['ego'].closest_agent_forward(p['cars']),
                     csr = lambda p: p['ego'].closest_stop_region_forward(),
                     cif = lambda p: p['ego'].closest_intersection_forward(),
@@ -241,7 +251,7 @@ class Car(graphics.Group):
                     in_any_intersection = lambda p: p['ego'].in_any_intersection(),
                     requested_priority = [
                         lambda p: p['within_stop_region'] and 'intersection_clear' in p and p['intersection_clear'],
-                        lambda p: p['ego'].canvas.priority_manager.request_priority(p['ego'].name),
+                        lambda p: p['ego'].canvas.priority_manager.request_priority(p['ego'].name, p['ego_index']),
                     ],
                     has_priority = lambda p: p['ego'].canvas.priority_manager.has_priority(p['ego'].name),
                     released_priority = [

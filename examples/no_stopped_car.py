@@ -1,6 +1,6 @@
 import craft
 
-env = craft.IntersectionOnlyEgoEnv()
+env = craft.NoStoppedCarEnv()
 
 obs = env.reset()
 done = False
