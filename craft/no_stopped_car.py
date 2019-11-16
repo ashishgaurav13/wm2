@@ -48,7 +48,9 @@ class NoStoppedCarEnv(design.Environment):
         canvas = graphics.Canvas(600, 600,
             static_elements, agents,
             ox = 300, oy = 300, scale = 600/100)
-        super().__init__(canvas)
+        
+        # Zero pad by 3 features to create 7 + 3 + 3 = 13 features for continual learning
+        super().__init__(canvas, zero_pad = 3)
 
         # Reward structure
         # Reward of -1.0 every step

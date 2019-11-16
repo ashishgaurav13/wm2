@@ -49,7 +49,9 @@ class OneStoppedCarEnv(design.Environment):
             static_elements, agents,
             ox = 300, oy = 300, scale = 600/100)
         default_policy = lambda c: [0, 0]
-        super().__init__(canvas, default_policy)
+
+        # Zero pad by 2 features to create 7 + 4 + 2 = 13 features for continual learning
+        super().__init__(canvas, default_policy, zero_pad = 2)
 
         # Reward structure
         d = {

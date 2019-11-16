@@ -12,10 +12,13 @@ class Environment(gym.Env):
     """
     Gym based environment that needs a canvas.
     Canvas cannot have more than 32 agents (32-bit int).
+    zero_pad zero_pads by a certain number of features.
+
+    Eg.
 
     canvas = ...
     default_policy = lambda c: c.aggressive_driving()
-    env = Environment(canvas, default_policy)
+    env = Environment(canvas, default_policy, zero_pad = 3)
 
     Freeze/unfreeze agents which you want to be updated. If
     frozen, these agents won't move, i.e. their policies
@@ -44,7 +47,7 @@ class Environment(gym.Env):
     """
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, canvas, default_policy = None):
+    def __init__(self, canvas, default_policy = None, zero_pad = 0):
         assert(type(canvas) == graphics.Canvas)
         self.canvas = canvas
         self.rendering = False
@@ -88,6 +91,9 @@ class Environment(gym.Env):
 
         # Call make_ready to set ready to true
         self.ready = False
+
+        # Zero pad features
+        self.zero_pad = zero_pad
 
     # Create obs space and action space after everything is set
     def make_ready(self):
@@ -149,6 +155,10 @@ class Environment(gym.Env):
                     ret[aid] = self.ego_fn(agent, self.reward_structure)
                 else:
                     ret[aid] = self.other_fn(agent, self.reward_structure)
+            
+            if self.zero_pad > 0:
+                ret["null"] = {("null_feature_%d" % ki): 0.0 for ki in range(self.zero_pad)}
+
             if self.debug['state_inspect']: 
                 print('Dict:')
                 print(json.dumps(ret, indent = 2))
