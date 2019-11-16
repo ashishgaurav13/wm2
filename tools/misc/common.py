@@ -20,4 +20,5 @@ def combine_infos(*args):
 
 def dict_to_numpy(x):
     if type(x) != dict: return x
-    return np.array([dict_to_numpy(val) for val in x.values()]).flatten()
+    if x == {}: return np.array([])
+    return np.hstack([dict_to_numpy(val) for val in x.values()]).flatten()
