@@ -1,1 +1,1 @@
-from .intersection_only_ego import IntersectionOnlyEgoEnv
+from .no_stopped_car import NoStoppedCarEnv
