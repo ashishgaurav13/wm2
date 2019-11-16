@@ -205,6 +205,7 @@ class Environment(gym.Env):
         assert(self.ego_id != None)
         objs = {
             'ego': self.agents[self.ego_id],
+            'v': self.agents,
         }
         self.reward_structure = RewardStructure(d, p, r, t, s, objs)
         self.reward_specified = True
