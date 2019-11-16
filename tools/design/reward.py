@@ -28,9 +28,9 @@ class RewardChecker(LTLProperties):
         for p in properties:
             property_str, reward, mode = p
             if not isfunction(reward):
-                self._r[property_str] = lambda p, t: reward # constant
+                self._r[property_str] = lambda p, t, r=reward: r # constant
             else:
-                self._r[property_str] = reward # lambda function
+                self._r[property_str] = lambda r=reward: r # lambda function
             self.properties += [
                 LTLProperty(property_str, 1, self._p._p, mode)
             ] # if 1, then evaluate the reward function
