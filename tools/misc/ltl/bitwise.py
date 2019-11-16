@@ -18,6 +18,7 @@ class Bits:
         return (self._d >> index) & 1
 
     def __setitem__(self, index, value):
+        value = bool(value) # ADDED
         value = (value & 1) << index
         mask = 1 << index
         self._d = (self._d & ~mask) | value
@@ -169,8 +170,11 @@ class SeqAP:
     def __int__(self):
         return int(self._d)
     
-    def get_dict(self):
+    def get_dict(self, keys = None):
         ret = {}
         for i, k in enumerate(self._k):
-            ret[k] = self._d[i]
+            if keys != None and k in keys:
+                ret[k] = self._d[i]
+            elif keys == None:
+                ret[k] = self._d[i]
         return ret

@@ -1,18 +1,24 @@
 import tools.pyglet as graphics
 from tools.misc.ltl import Bits, SeqAP
+import tools.misc as utilities
 from .reward import RewardStructure
 import numpy as np
 import time, datetime
 import gym
+from inspect import isfunction
+import json
 
 class Environment(gym.Env):
     """
     Gym based environment that needs a canvas.
     Canvas cannot have more than 32 agents (32-bit int).
+    zero_pad zero_pads by a certain number of features.
+
+    Eg.
 
     canvas = ...
     default_policy = lambda c: c.aggressive_driving()
-    env = Environment(canvas, default_policy)
+    env = Environment(canvas, default_policy, zero_pad = 3)
 
     Freeze/unfreeze agents which you want to be updated. If
     frozen, these agents won't move, i.e. their policies
@@ -41,7 +47,7 @@ class Environment(gym.Env):
     """
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, canvas, default_policy = None):
+    def __init__(self, canvas, default_policy = None, zero_pad = 0):
         assert(type(canvas) == graphics.Canvas)
         self.canvas = canvas
         self.rendering = False
@@ -56,6 +62,7 @@ class Environment(gym.Env):
         assert(num_egos <= 1)
         self.num_agents = len(self.agents)
         self.reward_specified = False
+        self.state_specified = False
         self.init_time = time.time()
 
         # Which agents to actually draw (or update)
@@ -74,11 +81,23 @@ class Environment(gym.Env):
         self.debug_fns = {
             'intersection_enter': self.debug_intersection_enter,
             'state_inspect': None,
+            'kill_after_state_inspect': None,
             'show_elapsed': None,
             'show_steps': None,
+            'record_reward_trajectory': None
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
+
+        # Call make_ready to set ready to true
+        self.ready = False
+
+        # Zero pad features
+        self.zero_pad = zero_pad
+
+    # Create obs space and action space after everything is set
+    def make_ready(self):
+        self.ready = True
 
         # Observation space (TODO: can be better defined)
         s = self.state()
@@ -117,12 +136,41 @@ class Environment(gym.Env):
         for ai in range(self.num_agents):
             self.agents_drawn[ai] = False
 
+    def specify_state(self, ego_fn, other_fn):
+        assert(not self.state_specified)
+        assert(isfunction(ego_fn))
+        assert(isfunction(other_fn))
+        self.state_specified = True
+        self.ego_fn = ego_fn
+        self.other_fn = other_fn
+
     def state(self):
         assert(hasattr(self, 'f'))
-        if self.debug['state_inspect']:
-            for agent in self.agents:
-                print('%s => %s' % (agent.name, agent.f))
-        return np.array([agent.f.numpy() for agent in self.agents])
+
+        ret = None
+        if self.state_specified:
+            ret = {}
+            for aid, agent in enumerate(self.agents):
+                if aid == self.ego_id:
+                    ret[aid] = self.ego_fn(agent, self.reward_structure)
+                else:
+                    ret[aid] = self.other_fn(agent, self.reward_structure)
+            
+            if self.zero_pad > 0:
+                ret["null"] = {("null_feature_%d" % ki): 0.0 for ki in range(self.zero_pad)}
+
+            if self.debug['state_inspect']: 
+                print('Dict:')
+                print(json.dumps(ret, indent = 2))
+                print('Flattened Numpy:')
+                print(utilities.dict_to_numpy(ret))
+                print('')
+                if self.debug['kill_after_state_inspect']:
+                    print('Killing ...')
+                    exit(0)
+            ret = utilities.dict_to_numpy(ret)
+
+        return ret
 
     def new_debug_variable(self, key, value):
         if key not in self.debug_variables:
@@ -145,12 +193,17 @@ class Environment(gym.Env):
         return self.canvas.is_agent_in_bounds(agent)
 
     def reset(self):
+        assert(self.ready)
         self.init_time = time.time()
         for agent in self.agents:
             agent.reset()
 
         if self.reward_specified:
+            self.total_reward = 0.0
             self.reward_structure.reset()
+
+        if self.debug['record_reward_trajectory']:
+            self.trajectory = []
 
         return self.state()
     
@@ -162,6 +215,7 @@ class Environment(gym.Env):
         assert(self.ego_id != None)
         objs = {
             'ego': self.agents[self.ego_id],
+            'v': self.agents,
         }
         self.reward_structure = RewardStructure(d, p, r, t, s, objs)
         self.reward_specified = True
@@ -173,6 +227,7 @@ class Environment(gym.Env):
             self.clip_to = clip_to
 
     def step(self, action):
+        assert(self.ready)
         agents_in_bounds = 0
         reward = 0
         done = False
@@ -195,9 +250,19 @@ class Environment(gym.Env):
         # ask the reward structure: what is the reward?
         if self.reward_specified:
             reward, info, _ = self.reward_structure.step()
-            reward = np.clip(reward, *self.clip_to)
+            if self.total_reward + reward > self.clip_to[1]:
+                if self.clip_to[1] != np.inf:
+                    reward = self.clip_to[1]-self.total_reward
+                else:
+                    reward = 0
+            if self.total_reward + reward < self.clip_to[0]:
+                if self.clip_to[0] != -np.inf:
+                    reward = self.clip_to[0]-self.total_reward
+                else:
+                    reward = 0
             reward = float(reward)
             reward = round(reward, self.round_to)
+            self.total_reward += reward
 
         # if terminated or succeeded
         if info != {}:
@@ -217,6 +282,9 @@ class Environment(gym.Env):
             assert(self.init_time)
             diff = int(time.time() - self.init_time)
             print('Execution: %s' % str(datetime.timedelta(seconds = diff)))
+        if self.debug['record_reward_trajectory']:
+            self.trajectory += [reward]
+            if done: info['traj'] = self.trajectory[:]
 
         return self.state(), reward, done, info
         

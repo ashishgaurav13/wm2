@@ -28,7 +28,7 @@ class RewardChecker(LTLProperties):
         for p in properties:
             property_str, reward, mode = p
             if not isfunction(reward):
-                self._r[property_str] = lambda p, t: reward # constant
+                self._r[property_str] = lambda p, t, r=reward: r # constant
             else:
                 self._r[property_str] = reward # lambda function
             self.properties += [
@@ -80,11 +80,11 @@ class RewardStructure:
     # Combine r, t, s values into a single thing
     def combine_rts(self, r, t, s):
         # check success
-        if len(s[1]) > 0:
+        if len(s[1]) != 0:
             s[1]['mode'] = 'success'
             return s
         # check failure
-        if len(t[1]) > 0:
+        if len(t[1]) != 0:
             t[1]['mode'] = 'termination'
             return t
         # normal reward
