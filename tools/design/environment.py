@@ -84,6 +84,7 @@ class Environment(gym.Env):
             'kill_after_state_inspect': None,
             'show_elapsed': None,
             'show_steps': None,
+            'show_reasons': None,
             'record_reward_trajectory': None
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
@@ -210,14 +211,18 @@ class Environment(gym.Env):
     # properties, rewards, terminations, successes
     # See craft.IntersectionOnlyEgoEnv for an example
     # round reward to some decimal places
-    def reward_structure(self, d, p, r, t, s, round_to = 3, clip_to = None):
+    # combine rewards through a provided 2-parameter function
+    def reward_structure(self, d, p, r, t, s, round_to = 3, clip_to = None,
+        combine_rewards = lambda a, b: a + b):
+
         assert(not self.reward_specified)
         assert(self.ego_id != None)
         objs = {
             'ego': self.agents[self.ego_id],
             'v': self.agents,
         }
-        self.reward_structure = RewardStructure(d, p, r, t, s, objs)
+        self.reward_structure = RewardStructure(d, p, r, t, s, objs,
+            combine_rewards = combine_rewards)
         self.reward_specified = True
         self.round_to = round_to
         self.clip_to = [-np.inf, np.inf]
@@ -285,6 +290,8 @@ class Environment(gym.Env):
         if self.debug['record_reward_trajectory']:
             self.trajectory += [reward]
             if done: info['traj'] = self.trajectory[:]
+        if self.debug['show_reasons'] and done:
+            print(info)
 
         return self.state(), reward, done, info
         
