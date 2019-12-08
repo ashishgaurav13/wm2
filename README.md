@@ -5,6 +5,4 @@ Simplifying wise-move for experiments.
 **Examples**: From the root directory, run any example in `examples` <br>
 **Custom Environments**: available in `craft`: `[IntersectionOnlyEgoEnv]`
 
-<image src="img/img1.png" height=250>
-<image src="img/img2.png" height=250>
-<image src="img/img3.png" height=250>
+<image src="img/img1.png" height=250> <image src="img/img2.png" height=250> <image src="img/img3.png" height=250>
