@@ -1,7 +1,6 @@
 import pyglet
 from pyglet import gl
 
-import tools.pyglet as graphics
 import tools.design as design
 import tools.math as wmath
 
