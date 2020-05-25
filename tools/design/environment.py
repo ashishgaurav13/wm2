@@ -47,7 +47,9 @@ class Environment(gym.Env):
     """
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, canvas, default_policy = None, zero_pad = 0):
+    def __init__(self, canvas, default_policy = None, zero_pad = 0,
+        discrete = False):
+
         assert(type(canvas) == graphics.Canvas)
         self.canvas = canvas
         self.rendering = False
@@ -85,16 +87,21 @@ class Environment(gym.Env):
             'show_elapsed': None,
             'show_steps': None,
             'show_reasons': None,
-            'record_reward_trajectory': None
+            'record_reward_trajectory': None,
+            'action_buckets': None,
         }
         self.debug = {k: False for k in self.debug_fns.keys()}
         self.debug_variables = {}
+        self.debug_variables['buckets'] = set([])
 
         # Call make_ready to set ready to true
         self.ready = False
 
         # Zero pad features
         self.zero_pad = zero_pad
+
+        # Discrete actions
+        self.discrete = discrete
 
     # Create obs space and action space after everything is set
     def make_ready(self):
@@ -114,10 +121,38 @@ class Environment(gym.Env):
             ego = self.agents[self.ego_id]
             amax = ego.MAX_ACCELERATION
             psidotmax = ego.MAX_STEERING_ANGLE_RATE
-            self.action_space = gym.spaces.Box(
-                low = np.array([-amax, -psidotmax]),
-                high = np.array([amax, psidotmax]),
-            )
+            if self.discrete:
+                self.action_space = gym.spaces.Discrete(13)
+                # self.action_mapping = {
+                #     0: [-amax, 0], # full brake
+                #     1: [0, 0], # continue
+                #     2: [amax, 0], # full accelerate
+                #     3: [amax, psidotmax],
+                #     4: [amax, -psidotmax],
+                #     5: [amax/2., 0],
+                #     6: [amax/2, psidotmax],
+                #     7: [amax/2, -psidotmax],
+                # }
+                self.action_mapping = {
+                    0: [amax, psidotmax],
+                    1: [amax, 0.75 * psidotmax],
+                    2: [amax, 0.5 * psidotmax],
+                    3: [amax, 0.25 * psidotmax],
+                    4: [amax, 0],
+                    5: [amax, -0.25 * psidotmax],
+                    6: [amax, -0.5 * psidotmax],
+                    7: [amax, -0.75 * psidotmax],
+                    8: [amax, -psidotmax],
+                    9: [amax/2, 0],
+                    10: [0, 0],
+                    11: [-amax/2, 0],
+                    12: [-amax, 0]
+                }
+            else:
+                self.action_space = gym.spaces.Box(
+                    low = np.array([-amax, -psidotmax]),
+                    high = np.array([amax, psidotmax]),
+                )
 
     def agents_unfrozen(self):
         return [ai for ai in range(self.num_agents) \
@@ -144,6 +179,8 @@ class Environment(gym.Env):
         self.state_specified = True
         self.ego_fn = ego_fn
         self.other_fn = other_fn
+        # self.debug['state_inspect'] = True
+        # self.debug['kill_after_state_inspect'] = True
 
     def state(self):
         assert(hasattr(self, 'f'))
@@ -238,6 +275,9 @@ class Environment(gym.Env):
         done = False
         info = {}
 
+        if self.discrete:
+            action = self.action_mapping[action[0]]
+
         # update ego
         if self.ego_id != None:
             if self.agents_drawn[self.ego_id]:
@@ -292,9 +332,28 @@ class Environment(gym.Env):
             if done: info['traj'] = self.trajectory[:]
         if self.debug['show_reasons'] and done:
             print(info)
+        if self.debug['action_buckets']: # bucketize actions
+            self.debug_variables['buckets'].add(tuple(action))
 
         return self.state(), reward, done, info
-        
+
+    def get_action_buckets(self, intervals = 10):
+        assert(self.debug['action_buckets'] == True)
+        ego = self.agents[self.ego_id]
+        amax = ego.MAX_ACCELERATION
+        psidotmax = ego.MAX_STEERING_ANGLE_RATE
+        grid = np.zeros((intervals, intervals))
+        resolve = lambda x, a, b, n: int((x-a) * n * 1.0 / (b-a))
+        def resolve2(x, a, b, n):
+            x = np.clip(x, a, b)
+            if x == b: return n-1
+            else: return resolve(x, a, b, n)
+        for action in self.debug_variables['buckets']:
+            i = resolve2(action[0], -amax, amax, intervals)
+            j = resolve2(action[1], -psidotmax, psidotmax, intervals)
+            grid[i][j] += 1
+        return grid
+
     def render(self, mode = 'human'):
         if not self.rendering:
             self.rendering = True
