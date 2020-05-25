@@ -35,7 +35,7 @@ class NoStoppedCarEnv(design.Environment):
         near_goal, 100 + expected_number_of_steps (S)
     """
 
-    def __init__(self):
+    def __init__(self, discrete = False):
 
         # Draw canvas
         static_elements = [
@@ -50,7 +50,7 @@ class NoStoppedCarEnv(design.Environment):
             ox = 300, oy = 300, scale = 600/100)
         
         # Zero pad by 3 features to create 7 + 3 + 3 = 13 features for continual learning
-        super().__init__(canvas, zero_pad = 3)
+        super().__init__(canvas, zero_pad = 3, discrete = discrete)
 
         # Reward structure
         # Reward of -1.0 every step

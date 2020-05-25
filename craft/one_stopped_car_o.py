@@ -7,7 +7,7 @@ import numpy as np
 
 class OneStoppedCarOEnv(design.Environment):
 
-    def __init__(self):
+    def __init__(self, discrete = False):
 
         # Draw canvas
         static_elements = [
@@ -24,7 +24,8 @@ class OneStoppedCarOEnv(design.Environment):
         default_policy = lambda c: [0, 0]
         
         # Zero pad by 3 features to create 7 + 4 + 2 = 13 features for continual learning
-        super().__init__(canvas, default_policy, zero_pad = 2)
+        # super().__init__(canvas, default_policy, zero_pad = 2, discrete = discrete)
+        super().__init__(canvas, default_policy, zero_pad = 0, discrete = discrete)
 
         # Reward structure
         expected_finish_steps = 150
@@ -56,8 +57,19 @@ class OneStoppedCarOEnv(design.Environment):
 
         # Specify state
         ego_fn = lambda agent, rs: utilities.combine_dicts(agent.f.get_dict(), rs._p.get_dict())
+        def ego_fn2(agent, rs):
+            d1 = agent.f.get_dict()
+            d2 = rs._p.get_dict()
+            return utilities.combine_dicts(d1, {
+                "stopped": d2["stopped"],
+                "out_of_bounds": d2["out_of_bounds"],
+                "near_goal_osco": d2["near_goal"],
+                "collided_osco": d2["collided"],
+                "past_car_osc": -1,
+                "collided_osc": -1,
+            })
         other_fn = lambda agent, rs: {}
-        self.specify_state(ego_fn, other_fn)
+        self.specify_state(ego_fn2, other_fn)
 
         # Finally
         self.make_ready()

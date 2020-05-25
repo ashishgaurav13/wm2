@@ -34,7 +34,7 @@ class TwoStoppedCarsEnv(design.Environment):
         near_goal, 100 (S)
     """
 
-    def __init__(self):
+    def __init__(self, discrete = False):
 
         # Draw canvas
         static_elements = [
@@ -50,7 +50,7 @@ class TwoStoppedCarsEnv(design.Environment):
             static_elements, agents,
             ox = 300, oy = 300, scale = 600/100)
         default_policy = lambda c: [0, 0]
-        super().__init__(canvas, default_policy)
+        super().__init__(canvas, default_policy, discrete = discrete)
 
         # Reward structure
         d = {

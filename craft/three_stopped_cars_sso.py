@@ -35,7 +35,7 @@ class ThreeStoppedCarsSSO(design.Environment):
         near_goal, 100 (S)
     """
 
-    def __init__(self):
+    def __init__(self, discrete = False):
 
         # Draw canvas
         static_elements = [
@@ -52,7 +52,7 @@ class ThreeStoppedCarsSSO(design.Environment):
             static_elements, agents,
             ox = 300, oy = 300, scale = 600/100)
         default_policy = lambda c: [0, 0]
-        super().__init__(canvas, default_policy)
+        super().__init__(canvas, default_policy, discrete = discrete)
 
         # Reward structure
         # Shortened the names of predicates
@@ -79,7 +79,7 @@ class ThreeStoppedCarsSSO(design.Environment):
         expected_finish_steps = 150
         existence_punishment = -1.0
         past_a_reward = +0.5
-        past_b_reward = +0.6
+        past_b_reward = +0.75
         r = [
             ["true", existence_punishment, 'satisfaction'],
             ['past_a and (not past_b)', past_a_reward, 'satisfaction'],
