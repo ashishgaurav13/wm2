@@ -5,7 +5,7 @@ import tools.math as wmath
 import tools.misc as utilities
 import numpy as np
 
-class OneStoppedCarOEnv(design.Environment):
+class OneStoppedCarO(design.Environment):
 
     def __init__(self, discrete = False):
 

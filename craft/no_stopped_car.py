@@ -5,7 +5,7 @@ import tools.math as wmath
 import tools.misc as utilities
 import numpy as np
 
-class NoStoppedCarEnv(design.Environment):
+class NoStoppedCar(design.Environment):
     """
     Environment with just one vehicle, that is,
     the ego. Ego is placed at the leftmost end and has to

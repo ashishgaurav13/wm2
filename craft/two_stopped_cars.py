@@ -5,7 +5,7 @@ import tools.math as wmath
 import tools.misc as utilities
 import numpy as np
 
-class TwoStoppedCarsEnv(design.Environment):
+class TwoStoppedCars(design.Environment):
     """
     Environment with ego and two stopped cars, close to ego.
     Ego is placed at the leftmost end and has to reach the rightmost end.
